@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>CAS Manager</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #fafafa; overflow: hidden; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    color: #1c1c1e;
+  }
+  #mono-proto-root { height: 100%; }
+  .tnum { font-variant-numeric: tabular-nums; }
+  button { font-family: inherit; }
+
+  /* Hover states — uniform, subtle, monochrome */
+  .mono-refl-card:hover { background: rgba(255,255,255,0.92) !important; box-shadow: inset 0 0 0 0.5px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.06) !important; }
+  .mono-refl-edit:hover { background: rgba(0,0,0,0.08) !important; }
+  .mono-user-dock:hover { background: rgba(255,255,255,0.82) !important; }
+  .mono-tray:hover { background: rgba(0,0,0,0.06); color: rgba(20,20,20,0.85) !important; }
+  .mono-sb-item:not(.active):hover { background: rgba(255,255,255,0.55); }
+  .mono-queue-row:hover { background: rgba(255,255,255,0.85) !important; }
+  .mono-schedule-row:hover { background: rgba(255,255,255,0.85) !important; }
+  .mono-close:hover { background: rgba(0,0,0,0.12) !important; }
+  .mono-settings-tab:hover { background: rgba(0,0,0,0.04); }
+  .mono-mode-card:hover { transform: translateY(-1px); }
+  .mono-photo-select:hover { transform: translateY(-1px); }
+  .mono-provider-card:not([data-active]):hover { background: rgba(255,255,255,0.78) !important; }
+</style>
+</head>
+<body>
+<div id="mono-proto-root"></div>
+
+<!-- React / ReactDOM / Babel — vendored locally so the desktop app works
+     offline and behind restrictive corporate / regional networks. -->
+<script src="/static/vendor/react.development.js"></script>
+<script src="/static/vendor/react-dom.development.js"></script>
+<script src="/static/vendor/babel.min.js"></script>
+
+<script type="text/babel" src="/static/jsx/api.js"></script>
+<script type="text/babel" src="/static/jsx/icons.jsx"></script>
+<script type="text/babel" src="/static/jsx/mono-theme.jsx"></script>
+<script type="text/babel" src="/static/jsx/mono-shell.jsx"></script>
+<script type="text/babel" src="/static/jsx/mono-modal-shell.jsx"></script>
+<script type="text/babel" src="/static/jsx/mono-modals.jsx"></script>
+<script type="text/babel" src="/static/jsx/mono-settings-hub.jsx"></script>
+<script type="text/babel" src="/static/jsx/mono-prototype.jsx"></script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+*.egg-info/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# PyInstaller output
+build/
+dist/
+*.manifest
+
+# Runtime / per-user — never tracked
+mb_state.json
+cas_data.db
+cas_data.db-shm
+cas_data.db-wal
+cas_config.json
+app.log
+mb_backup_out/
+
+# Editor / OS junk
+.vscode/
+.idea/
+.claude/
+.DS_Store
+*.swp
