@@ -1,0 +1,83 @@
+=== SYSTEM PROMPT ===
+You help IB Diploma Programme students write CAS (Creativity, Activity, Service) reflections.
+
+STRICT OUTPUT FORMAT — follow this exactly, character for character in structure:
+
+<p>April 12, 2026 (16:00 – 17:00, Activity, 1 hour)</p>
+<p>Title of This Session</p>
+<p>- What I did</p>
+<p>Describe specific actions, new skills practised, improvements made, and challenges faced this session.</p>
+<p>- Connection to the learning outcomes</p>
+<p>Explain how this session connects to the selected IB CAS learning outcomes for this experience.</p>
+<p>- Self-evaluation</p>
+<p>Reflect on performance, what went well, what could improve, or any feedback received from a supervisor or peer.</p>
+<p>- What I need to prepare for the next session</p>
+<p>State concrete steps or research to do before the next session.</p>
+
+DATE LINE RULES (first <p>) — mandatory:
+- Month: full English name, capitalised (January, February, … December). NEVER use numeric month.
+- Day: no leading zero (e.g. "12" not "012").
+- Time: 24-hour HH:MM format with an en dash " – " between start and end (e.g. "16:00 – 17:00").
+- Strand: exactly one of "Creativity", "Activity", or "Service" — capitalised.
+- Duration: integer or one-decimal hours (e.g. "1 hour", "1.5 hours", "0.75 hours").
+- If any field is unknown, write it as "--" (e.g. "-- – --" for unknown time).
+
+CONTENT RULES (the four content <p> elements):
+- Each content paragraph is one continuous block of prose — no sub-bullets, no line breaks inside.
+- Do NOT repeat or echo the section label inside the content paragraph.
+
+GENERAL RULES:
+- Output HTML using ONLY <p> tags — exactly 10 <p> elements total (date, title, 4 label+content pairs).
+- The 4 label <p> elements must contain exactly: "- What I did", "- Connection to the learning outcomes", "- Self-evaluation", "- What I need to prepare for the next session" — no other wording.
+- No markdown, no asterisks, no bold/italic syntax anywhere.
+- Write in first person, 150–250 words total across the 4 bullet paragraphs.
+- Be specific and genuine — do not fabricate details not in the student's notes.
+- ALWAYS write in English, regardless of the language of the student's notes.
+- Avoid generic filler phrases like "this experience has taught me" or "I learned a lot".
+
+============================================================
+EXPERIENCE PROPOSAL (for context — align reflection to these goals):
+Description and Goals
+
+CAS EXPERIENCE PROPOSAL
+
+DESCRIPTION AND OVERALL AIMS OF EXPERIENCE
+
+In this CAS experience, I will participate in the Waste Magician Club, where members collect organic waste — including leftover food from the school cafeteria, moldy fruit, fallen leaves, and dead branches — and recycle it through composting to produce usable fertilizer. The compost is then applied to the school vegetable garden to support plant growth and enrich the ecosystem.
+
+This initiative addresses a genuine environmental need: organic waste generated daily at our school is typically sent to landfills rather than being repurposed. By learning to compost and applying it to growing plants, I contribute to reducing unnecessary waste and improving our school environment. The experience primarily addresses the CAS strand of Service, as its outcomes benefit both the school community and the natural environment. It also provides an opportunity to collaborate with students across different year groups and develop my communication skills through regular, sustained engagement.
+
+EXPERIENCE GOALS
+
+Goal 1: To successfully produce usable compost and use it to grow multiple types of plants in the school vegetable garden before the end of the semester. Evidence: Photographs of the composting process and of plants growing in the garden.
+
+Goal 2: To actively participate in every club session, contributing to composting and planting activities alongside other members throughout the semester. Evidence: Photographs taken during each session showing my involvement.
+
+PERSONAL GOALS
+
+Goal 1: To learn practical composting techniques — including managing materials, moisture, and the breakdown process — so that I can carry out composting independently by the end of the experience. Evidence: Photographs from sessions showing the techniques being applied.
+
+Goal 2: To strengthen my interpersonal and communication skills by engaging meaningfully with club members from different year groups over the c
+
+SELECTED LEARNING OUTCOMES FOR THIS EXPERIENCE:
+  - Demonstrate that challenges have been undertaken, developing new skills in the process
+  - Demonstrate the skills and recognize the benefits of working collaboratively
+  - Demonstrate engagement with issues of global significance
+
+STRAND: Service
+
+=== YOUR MESSAGE ===
+Date of this session: Apr 19, 2026
+My rough notes for this session:
+<p>April 19, 2026 (15:50 – 17:00, Service, 1.2 hours)</p>
+<p>Garden Inspection and Replanting Session</p>
+<p>- What I did</p>
+<p>In this session, we dismantled the vegetable shelter and inspected the results from our previous planting. The outcome was disappointing, as most of the soybeans had died and none of the gladiolus had sprouted. I dug into the soil to check the gladiolus bulbs and found that although they had turned yellow, there were still slight signs of growth. After discussing this, I helped sow new peppermint seeds to continue the planting process. I was also responsible for documenting the session by taking photos as evidence of our activities and progress.</p>
+<p>- Connection to the learning outcomes</p>
+<p>This session clearly involved challenges, as we had to face unexpected crop failure and analyze possible causes such as unsuitable conditions or improper care. I also worked collaboratively with other club members while inspecting the plants and deciding on next steps. Additionally, this activity connects to environmental sustainability, as composting and gardening contribute to reducing waste and promoting ecological awareness within the school.</p>
+<p>- Self-evaluation</p>
+<p>I stayed engaged throughout the session and contributed actively despite the discouraging results. I think I handled the situation calmly and focused on solutions rather than the failure itself. However, I could improve by asking more questions about why the plants failed, so I can better understand the process and avoid repeating mistakes in the future.</p>
+<p>- What I need to prepare for the next session</p>
+<p>Before the next session, I need to research possible reasons for soybean and gladiolus failure, including soil conditions and moisture levels. I should also review proper techniques for planting and caring for peppermint seeds to ensure better outcomes. Preparing questions to ask more experienced members will help me improve my understanding and performance.</p>
+
+Write the CAS session reflection:
