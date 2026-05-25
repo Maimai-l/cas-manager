@@ -49,4 +49,4 @@ All user data lives in `~/Library/Application Support/CAS Manager/` on macOS:
 
 ## License
 
-[Add the license you want — MIT is the usual choice for personal open-source projects]
+MIT
