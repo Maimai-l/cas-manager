@@ -216,8 +216,9 @@ function LoginForm({ onCancel }) {
         </Btn>
       </div>
       <div style={{ fontSize: 10.5, color: N.inkSoft, lineHeight: 1.5, marginTop: 4 }}>
-        The password is only used for one-time login, and the session token is saved locally in mb_state.json.
-        The school URL will be automatically saved to the configuration after successful login.
+        Credentials are stored only on this computer (mb_state.json) so the app can
+        re-login automatically when the session expires — you won't need to type them again.
+        The school URL is saved to the configuration after a successful login.
       </div>
     </div>);
 }
@@ -794,14 +795,16 @@ function PlaceholderHubModal() {
   }
 
   function openFill(q) {
-    // Jump to AI step 1 with the placeholder pre-filled
-    ctx.setModalPayload({
-      fillingRid:  q.rid,
-      fillingCas:  q.cas_id,
-      fillingDate: q.group_date || null,
-      notes: "",
+    // Close this modal and open the flat composer (AI tab) pre-targeted at
+    // the placeholder — also switches the main panel to that experience.
+    ctx.close();
+    ctx.openComposer({
+      mode: "ai",
+      casId: q.cas_id,
+      rid: q.rid,
+      date: q.group_date || null,
+      isPlaceholderFill: true,
     });
-    ctx.go("ai-1");
   }
 
   // Combine schedules with all experiences so users can enable new ones

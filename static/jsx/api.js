@@ -5,7 +5,7 @@
 (function () {
   const _base = "";  // same-origin
 
-  async function _req(method, path, body, isForm) {
+  async function _req(method, path, body, isForm, _isRetry) {
     const opts = { method, headers: {} };
     if (body !== undefined && body !== null) {
       if (isForm) {
@@ -28,6 +28,12 @@
       throw new Error(`http_${resp.status}: response was not JSON`);
     }
     if (!json.ok) {
+      // A session_expired response invalidates the server-side session cache;
+      // one retry lets the backend walk its recovery chain (token refresh →
+      // saved-credential re-login) without bothering the user.
+      if (json.error === "session_expired" && !_isRetry) {
+        return _req(method, path, body, isForm, true);
+      }
       const err = new Error(json.error || `http_${resp.status}`);
       err.status = resp.status;
       err.detail = json.detail || "";
