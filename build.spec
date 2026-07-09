@@ -7,12 +7,12 @@
 #     dist/CAS Manager.app
 #
 # Notes:
-# - `cas` and `mb_login` are pulled in via importlib.import_module() at
-#   runtime in cas_controller.ctrl_*, so PyInstaller can't see them
-#   statically — they go into `hiddenimports`.
-# - `cas.py` does `import anthropic` lazily inside _ai_via_anthropic() so
-#   it's only required if the user picks the Anthropic provider. We list it
-#   as a hidden import so it's bundled when present, but the build won't
+# - All first-party modules are imported statically now (the old
+#   importlib.import_module("cas") hack is gone), but they stay in
+#   `hiddenimports` as cheap insurance against future lazy imports.
+# - `cas_ai.py` does `import anthropic` lazily inside _ai_via_anthropic()
+#   so it's only required if the user picks the Anthropic provider. We list
+#   it as a hidden import so it's bundled when present, but the build won't
 #   fail if anthropic isn't installed (PyInstaller warns and skips).
 # - `tkinter` etc. are excluded — we don't use them, and they bloat the
 #   bundle by ~30 MB.
@@ -29,7 +29,7 @@ a = Analysis(
         ('static',    'static'),
     ],
     hiddenimports=[
-        'cas',
+        'cas_ai',
         'cas_api',
         'cas_db',
         'cas_controller',
