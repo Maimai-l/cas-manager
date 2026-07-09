@@ -106,7 +106,8 @@ function Composer() {
   }, [payload, ctx.experiences, ctx.activeExp]);
 
   if (!payload) return null;
-  return <ComposerInner key={`${payload.casId}-${payload.rid || "new"}`} payload={payload} exp={exp} ctx={ctx} />;
+  const key = `${payload.casId}-${payload.rid || (payload.sa && payload.sa.name) || "new"}`;
+  return <ComposerInner key={key} payload={payload} exp={exp} ctx={ctx} />;
 }
 
 function ComposerInner({ payload, exp, ctx }) {
@@ -114,13 +115,13 @@ function ComposerInner({ payload, exp, ctx }) {
   const rid          = payload.rid || null;           // editing / placeholder-filling
   const date         = payload.date || null;
   const existingText = payload.existingText || null;  // set → AI mode revises
+  const sa           = payload.sa || null;            // {name, question} → SA answer mode
   const expName      = (exp && (exp.name || `Experience ${exp.id}`)) || `Experience ${casId}`;
 
   const [mode, setMode]       = React.useState(payload.mode || "write"); // "write" | "ai"
   const [isFinal, setIsFinal] = React.useState(!!payload.isFinal);
   const [text, setText]       = React.useState(payload.initialText || "");   // write tab
   const [notes, setNotes]     = React.useState("");                           // ai tab
-  const [prompt, setPrompt]   = React.useState("");
   const [result, setResult]   = React.useState("");                           // pasted or generated
   const { loading, error, run } = useAsyncOp();
 
@@ -128,47 +129,58 @@ function ComposerInner({ payload, exp, ctx }) {
   const isManual   = aiProvider === "prompt";
   const aiKind     = existingText ? "edit" : (isFinal ? "final" : "reflection");
   const includeHistory = isFinal && !existingText;
-  const canBuild   = !!notes.trim() || (isFinal && !existingText);
+  const canBuild   = sa ? true : (!!notes.trim() || (isFinal && !existingText));
 
   const title =
+    sa           ? `${sa.question} · ${expName}` :
     existingText ? `Edit Journal · ${expName}` :
     rid          ? `Fill Placeholder · ${expName}${date ? ` · ${date}` : ""}` :
                    `New Journal · ${expName}`;
 
+  // Copied by CopyBtn — the prompt itself is not displayed (nothing to edit
+  // there); clicking again rebuilds and re-copies.
   async function buildPrompt() {
-    // Returned text is copied by CopyBtn; also shown in the prompt box below.
     let p;
     await run("Building prompt…", async () => {
-      const r = await API.buildPrompt(casId, notes, aiKind, date, existingText, includeHistory);
+      const r = sa
+        ? await API.saPrompt(casId, sa.question, notes, existingText)
+        : await API.buildPrompt(casId, notes, aiKind, date, existingText, includeHistory);
       p = r.prompt;
-      setPrompt(p);
     });
     return p;
   }
 
   async function generateDirect() {
     await run("Generating with AI…", async () => {
-      const r = await API.generateAI(casId, notes, aiKind, date, existingText, includeHistory);
+      const r = sa
+        ? await API.saGenerate(casId, sa.question, notes, existingText)
+        : await API.generateAI(casId, notes, aiKind, date, existingText, includeHistory);
       setResult(r.result || "");
     });
   }
 
   async function send(body) {
     if (!body || !body.trim()) return;
-    const html = wrapPlainAsHtml(body);
-    await run(rid ? "Saving…" : "Posting…", async () => {
-      if (rid) {
-        await API.editJournal(rid, casId, html, null);
+    await run(rid || sa ? "Saving…" : "Posting…", async () => {
+      if (sa) {
+        // SA answers are plain text boxes — no <p> wrapping.
+        await API.saveSA(casId, sa.name, stripHtml(body).trim());
+        if (ctx.bumpSA) ctx.bumpSA();
       } else {
-        await API.createJournal(casId, html, null);
+        const html = wrapPlainAsHtml(body);
+        if (rid) {
+          await API.editJournal(rid, casId, html, null);
+        } else {
+          await API.createJournal(casId, html, null);
+        }
+        await ctx.refreshAfterMutation();
       }
-      await ctx.refreshAfterMutation();
       ctx.closeComposer();
     });
   }
 
   const sendBody = mode === "write" ? text : result;
-  const previewHtml = mode === "ai" && result.trim() ? wrapPlainAsHtml(result) : "";
+  const previewHtml = !sa && mode === "ai" && result.trim() ? wrapPlainAsHtml(result) : "";
 
   return (
     <div style={{
@@ -183,8 +195,9 @@ function ComposerInner({ payload, exp, ctx }) {
         display: "flex", alignItems: "center", gap: 10,
         padding: "9px 14px 8px",
       }}>
-        <I name={existingText ? "edit" : "pen"} size={13} stroke={1.8} style={{ color: N.inkMid }} />
-        <span style={{
+        <I name={sa ? "inbox" : existingText ? "edit" : "pen"} size={13} stroke={1.8}
+           style={{ color: N.inkMid, flexShrink: 0 }} />
+        <span title={title} style={{
           fontSize: 12, fontWeight: 500, color: N.inkDeep,
           whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
         }}>{title}</span>
@@ -197,7 +210,7 @@ function ComposerInner({ payload, exp, ctx }) {
           <TabBtn active={mode === "ai"} icon="sparkle" onClick={() => setMode("ai")}>AI</TabBtn>
         </div>
 
-        {mode === "ai" && !existingText && (
+        {mode === "ai" && !existingText && !sa && (
           <label style={{
             display: "inline-flex", alignItems: "center", gap: 5,
             fontSize: 11, fontWeight: 500, color: isFinal ? N.inkDeep : N.inkMid,
@@ -215,9 +228,6 @@ function ComposerInner({ payload, exp, ctx }) {
         )}
 
         <div style={{ flex: 1 }} />
-        <span style={{ fontSize: 10.5, color: N.inkSoft }}>
-          {mode === "ai" ? `provider: ${aiProvider}` : `${text.length} chars · auto ¶ wrap`}
-        </span>
         <button onClick={ctx.closeComposer} className="mono-close" title="Close composer" style={{
           width: 20, height: 20, borderRadius: "50%", border: "none",
           background: "rgba(0,0,0,0.06)", color: "rgba(20,20,20,0.65)",
@@ -235,30 +245,28 @@ function ComposerInner({ payload, exp, ctx }) {
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Write your reflection here…"
+              placeholder={sa ? "Write your answer here…" : "Write your reflection here…"}
               style={taStyle(150)}
             />
           </div>
         ) : (
           <div style={{ display: "flex", gap: 10, alignItems: "stretch" }}>
-            {/* Left column — notes + prompt */}
+            {/* Left column — notes + one action button. The built prompt is
+                copied, not displayed: there is nothing to edit in it. */}
             <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-              <FieldLabel hint={
-                existingText ? "what to change / tone / focus" :
-                isFinal      ? "optional — history attached automatically" :
-                               "≥ 20 chars recommended"
-              }>
-                {existingText ? "Changes / instructions" :
-                 isFinal      ? "Themes to emphasize" : "Your rough notes"}
+              <FieldLabel>
+                {existingText && !sa ? "Changes / instructions" :
+                 isFinal            ? "Themes to emphasize" : "Your notes"}
               </FieldLabel>
               <div style={{ ...boxStyle, flex: 1 }}>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder={
-                    existingText ? "e.g. tighten the second paragraph, emphasize teamwork more" :
-                    isFinal      ? "e.g. focus on perseverance and LO5 (collaboration)" :
-                                   "e.g. practiced chord transitions, learned G→D switch, 45 min"
+                    sa                   ? "Optional — what to emphasize in the answer" :
+                    existingText         ? "e.g. tighten the second paragraph, emphasize teamwork more" :
+                    isFinal              ? "e.g. focus on perseverance and LO5 (collaboration)" :
+                                           "e.g. practiced chord transitions, learned G→D switch, 45 min"
                   }
                   style={taStyle(110)}
                 />
@@ -272,42 +280,20 @@ function ComposerInner({ payload, exp, ctx }) {
                   <Btn primary icon="sparkle" onClick={generateDirect}
                        disabled={!!loading || !canBuild}>Generate</Btn>
                 )}
-                {isManual && prompt && (
-                  <span style={{
-                    fontSize: 10.5, color: N.inkSoft,
-                    flex: 1, minWidth: 0,
-                    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-                  }}>
-                    {prompt.length} chars — paste into any AI, answer goes →
-                  </span>
-                )}
               </div>
-              {isManual && prompt && (
-                <div style={{
-                  ...boxStyle, maxHeight: 76, overflow: "auto",
-                  padding: "7px 10px", cursor: "copy",
-                  fontFamily: `"SF Mono", Menlo, monospace`,
-                  fontSize: 10.5, lineHeight: 1.5, color: N.inkMid,
-                  whiteSpace: "pre-wrap", wordBreak: "break-word",
-                }}
-                  title="Click to copy again"
-                  onClick={() => copyTextToClipboard(prompt)}>
-                  {prompt}
-                </div>
-              )}
             </div>
 
             {/* Right column — AI response + live preview */}
             <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-              <FieldLabel hint={isManual ? "plain text or <p> HTML" : "editable"}>
-                {isManual ? "Paste AI's response" : "Generated reflection"}
+              <FieldLabel>
+                {isManual ? "Paste AI's response" : "Result"}
               </FieldLabel>
               <div style={{ ...boxStyle, flex: 1 }}>
                 <textarea
                   value={result}
                   onChange={(e) => setResult(e.target.value)}
                   placeholder={isManual
-                    ? "Paste the response from ChatGPT / Claude / DeepSeek here…"
+                    ? "Paste the AI's response here…"
                     : "Click Generate — the result lands here and can be edited"}
                   style={taStyle(110)}
                 />

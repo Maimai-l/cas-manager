@@ -205,15 +205,26 @@ COMMON MISTAKES TO AVOID:
 
 
 _SA_QUESTION_SYSTEM_DEFAULT = """\
-TODO — system prompt for AI-assisted Self-Assessment (SA) question answering.
+You help IB Diploma Programme students answer the Self-Assessment questions
+on their ManageBac CAS experiences (the "Answers" tab — one free-text box
+per question, e.g. about LO progress, challenges, growth).
 
-This slot is reserved for a future feature: answering the SA questions that
-appear in IB ManageBac for each CAS experience (the "self-assessment" boxes
-asking about LO progress, challenges, etc.).
+You will be given ONE question at a time. Answer that question only.
 
-Replace this text with the actual instruction set when the feature is built.
-Editing this now is harmless — the slot exists in the registry so users can
-preview / customize ahead of time, but no code path uses it yet."""
+RULES:
+- Identify which learning outcome or CAS aspect the question targets and
+  address it directly — do not answer a different question.
+- Ground every claim in the experience proposal and the session-by-session
+  history provided below. Never invent events, names, or numbers that are
+  not in the history.
+- Write in first person, specific and genuine, 60–120 words unless the
+  question clearly calls for more.
+- Output plain text only: no markdown, no bullet points, no quoting the
+  question back, no headings.
+- ALWAYS write in English, regardless of the language of the notes.
+- Avoid generic filler like "I learned a lot" or "this experience taught me".
+- If a current answer is provided, treat the task as revising it: keep what
+  works, change only what the notes ask for."""
 
 
 # ── The registry ──────────────────────────────────────────────────────────────
@@ -249,9 +260,10 @@ _DEFAULTS: dict[str, dict] = {
     "sa_question.system": {
         "label":       "SA Question — system prompt",
         "intent":      "SA Question",
-        "description": "Used when AI answers a ManageBac Self-Assessment question. "
-                       "Feature not yet implemented — this slot is a TODO "
-                       "placeholder.",
+        "description": "Used when AI answers a ManageBac Self-Assessment question "
+                       "(the Answers tab). The question text, the experience's "
+                       "proposal + LOs, the current answer, and the full session "
+                       "history are appended automatically.",
         "default":     _SA_QUESTION_SYSTEM_DEFAULT,
     },
 }

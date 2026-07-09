@@ -454,6 +454,7 @@ function MainPanel({
 
       {/* Reflection rows — flat, joined with hairlines (no floating cards) */}
       <div style={{ flex: 1, overflow: "auto" }}>
+        <SASection casId={activeExp.id} readOnly={!!activeExp.is_completed} />
         {reflLoading ? (
           <div style={{ color: N.inkSoft, fontSize: 11, padding: "12px 22px" }}>Loading reflections…</div>
         ) : null}
@@ -477,6 +478,113 @@ function MainPanel({
 
       {/* Flat, non-modal journal workbench — replaces the old modal chain */}
       <window.MonoComposer />
+    </div>);
+}
+
+// ── Self-Assessment section — collapsed row that expands into the
+//    experience's Answers-tab questions (fetched live when opened) ────────
+function SASection({ casId, readOnly }) {
+  const ctx = React.useContext(window.MonoCtx);
+  const [open, setOpen] = React.useState(false);
+  const [items, setItems] = React.useState(null);   // null = not loaded
+  const [error, setError] = React.useState(null);
+  const [loading, setLoading] = React.useState(false);
+
+  const reload = React.useCallback(async () => {
+    setLoading(true); setError(null);
+    try {
+      const qs = await window.API.saQuestions(casId);
+      setItems(qs || []);
+    } catch (e) {
+      setError(e.message === "offline" ? "ManageBac unreachable" : (e.message || String(e)));
+    } finally {
+      setLoading(false);
+    }
+  }, [casId]);
+
+  // Collapse + clear when switching experiences; refetch after an SA save.
+  React.useEffect(() => { setOpen(false); setItems(null); setError(null); }, [casId]);
+  React.useEffect(() => { if (open) reload(); }, [open, reload, ctx.saVersion]);
+
+  return (
+    <div style={{ borderBottom: SEP }}>
+      <div
+        onClick={() => setOpen(!open)}
+        style={{
+          display: "flex", alignItems: "center", gap: 8,
+          padding: "8px 22px", cursor: "pointer",
+          background: "#fafafa",
+        }}>
+        <I name="chevron" size={11} stroke={1.8}
+           style={{ color: N.inkSoft, transform: open ? "rotate(90deg)" : "none", transition: "transform 0.15s" }} />
+        <span style={{ fontSize: 12, fontWeight: 500, color: N.inkDeep }}>Self-Assessment</span>
+        <span style={{ fontSize: 10.5, color: N.inkSoft }}>
+          {items ? `${items.length} questions` : ""}
+        </span>
+      </div>
+
+      {open && (
+        <div>
+          {loading && <div style={{ padding: "8px 22px", fontSize: 11, color: N.inkSoft }}>Loading from ManageBac…</div>}
+          {error   && <div style={{ padding: "8px 22px", fontSize: 11, color: "#a4332e" }}>⚠ {error}</div>}
+          {items && !items.length && !loading && (
+            <div style={{ padding: "8px 22px", fontSize: 11, color: N.inkSoft }}>No questions on this experience.</div>
+          )}
+          {(items || []).map((q) => (
+            <SARow key={q.name} q={q} casId={casId} readOnly={readOnly} />
+          ))}
+        </div>
+      )}
+    </div>);
+}
+
+function SARow({ q, casId, readOnly }) {
+  const ctx = React.useContext(window.MonoCtx);
+  const [copied, setCopied] = React.useState(null);
+  const answered = !!(q.answer || "").trim();
+
+  async function copyAnswer() {
+    const ok = await window.copyTextToClipboard(q.answer || "");
+    setCopied(ok ? "ok" : "fail");
+    setTimeout(() => setCopied(null), 1600);
+  }
+
+  function edit() {
+    ctx.openComposer({
+      mode: answered ? "write" : "ai",
+      casId,
+      sa: { name: q.name, question: q.question },
+      existingText: answered ? q.answer : null,
+      initialText: q.answer || "",
+    });
+  }
+
+  return (
+    <div style={{ borderTop: SEP, padding: "8px 22px 9px", display: "flex", gap: 10 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 11.5, color: N.inkMid, lineHeight: 1.5 }}>{q.question}</div>
+        <div style={{
+          marginTop: 3, fontSize: 12.5, lineHeight: 1.55,
+          color: answered ? N.ink : N.inkSoft,
+          fontStyle: answered ? "normal" : "italic",
+          whiteSpace: "pre-wrap",
+        }}>
+          {answered ? q.answer : "(no answer yet)"}
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 6, alignItems: "flex-start", flexShrink: 0 }}>
+        {answered && (
+          <RowBtn
+            icon={copied === "ok" ? "check" : "copy"}
+            label={copied === "ok" ? "Copied" : copied === "fail" ? "Failed" : "Copy"}
+            danger={copied === "fail"}
+            onClick={copyAnswer}
+          />
+        )}
+        {!readOnly && (
+          <RowBtn icon="pen" label={answered ? "Edit" : "Answer"} width={68} onClick={edit} />
+        )}
+      </div>
     </div>);
 }
 
