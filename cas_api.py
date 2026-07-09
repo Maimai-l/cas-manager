@@ -929,10 +929,18 @@ def fetch_sa_form(s: requests.Session, base: str, cas_id: int) -> dict:
         if not name:
             continue
         if el.name == "textarea":
+            # Rails emits a newline right after <textarea>; browsers drop it
+            # but BeautifulSoup keeps it. Strip exactly one, or every save
+            # round-trip would prepend a blank line to the stored answer.
+            raw = el.get_text() or ""
+            if raw.startswith("\r\n"):
+                raw = raw[2:]
+            elif raw.startswith("\n"):
+                raw = raw[1:]
             questions.append({
                 "name":     name,
                 "question": _sa_question_label(el, soup),
-                "answer":   el.get_text() or "",
+                "answer":   raw,
             })
         elif el.name == "input":
             itype = (el.get("type") or "text").lower()

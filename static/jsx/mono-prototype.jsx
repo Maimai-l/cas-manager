@@ -19,9 +19,6 @@ function Prototype() {
   // Placeholder Hub side panel (collapsed by default)
   const [hubOpen, setHubOpen] = React.useState(false);
 
-  // Bumped after an SA answer is saved so the SA section refetches
-  const [saVersion, setSaVersion] = React.useState(0);
-
   // ── App data ────────────────────────────────────────────────────────────
   const [status, setStatus] = React.useState({ logged_in: false, ai_provider: "prompt" });
   const [appState, setAppState] = React.useState("loading");      // loading|ok|unauthed|error
@@ -219,7 +216,6 @@ function Prototype() {
   }, []);
   const closeComposer = React.useCallback(() => setComposer(null), []);
   const toggleHub = React.useCallback(() => setHubOpen((v) => !v), []);
-  const bumpSA = React.useCallback(() => setSaVersion((v) => v + 1), []);
 
   const activeExp = experiences.find((e) => e.id === activeId) || null;
 
@@ -236,10 +232,9 @@ function Prototype() {
     status, appState, syncState, config,
     experiences, activeId, activeExp, reflections, reflLoading,
     pendingCount, modalPayload,
-    // composer + hub side panel + SA refresh signal
+    // composer + hub side panel
     composer, openComposer, closeComposer,
     hubOpen, toggleHub,
-    saVersion, bumpSA,
     // setters
     setActiveId, setModalPayload,
     // mutations
