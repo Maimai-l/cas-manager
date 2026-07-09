@@ -22,8 +22,8 @@ function SettingsModal({ tab = "account", onTab }) {
       <div style={{ display: "flex", height: 480, marginTop: -4 }}>
         <div style={{
           width: 160, padding: "14px 8px",
-          background: "rgba(0,0,0,0.02)",
-          borderRight: "0.5px solid " + N.hairline,
+          background: "#f4f4f3",
+          borderRight: HUB_SEP,
           display: "flex", flexDirection: "column", gap: 2
         }}>
           <SettingsTab icon="user"     label="Account"  active={tab === "account"}  onClick={() => onTab && onTab("account")} />
@@ -51,11 +51,10 @@ function SettingsTab({ icon, label, active, onClick }) {
       className="mono-settings-tab"
       style={{
         display: "flex", alignItems: "center", gap: 9,
-        padding: "7px 10px", borderRadius: 7,
+        padding: "7px 10px", borderRadius: 5,
         fontSize: 12, fontWeight: 500,
         color: active ? N.inkDeep : N.inkMid,
-        background: active ? "rgba(255,255,255,0.8)" : "transparent",
-        boxShadow: active ? "inset 0 0 0 0.5px rgba(0,0,0,0.08)" : "none",
+        background: active ? "rgba(0,0,0,0.07)" : "transparent",
         cursor: "pointer",
         transition: "background 0.12s"
       }}>
@@ -100,13 +99,13 @@ function LoggedInBlock() {
   return (
     <div style={{
       padding: "12px 14px",
-      background: "rgba(255,255,255,0.6)",
-      borderRadius: 10,
-      boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.06)",
+      background: "#fff",
+      borderRadius: 5,
+      boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)",
       display: "flex", alignItems: "center", gap: 12
     }}>
       <div style={{
-        width: 36, height: 36, borderRadius: 9,
+        width: 36, height: 36, borderRadius: 5,
         background: A.solid, color: A.onAccent,
         display: "flex", alignItems: "center", justifyContent: "center"
       }}>
@@ -162,9 +161,9 @@ function LoginForm({ onCancel }) {
   return (
     <div style={{
       padding: "14px 14px 12px",
-      background: "rgba(255,255,255,0.6)",
-      borderRadius: 10,
-      boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.06)",
+      background: "#fafafa",
+      borderRadius: 5,
+      boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
       display: "flex", flexDirection: "column", gap: 10
     }}>
       <FieldLabel hint="In the form of https://<school>.managebac.cn / .com / .org">
@@ -431,9 +430,9 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
 
   return (
     <div style={{
-      borderRadius: 9,
-      background: "rgba(255,255,255,0.65)",
-      boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.06)",
+      borderRadius: 5,
+      background: "#fff",
+      boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)",
       overflow: "hidden",
       transition: "background 0.12s"
     }}>
@@ -474,7 +473,7 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
 
       {open && (
         <div style={{ padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: 10,
-                      borderTop: "0.5px solid " + N.hairline }}>
+                      borderTop: HUB_SEP }}>
           <div style={{ fontSize: 11, color: N.inkMid, lineHeight: 1.55, marginTop: 10 }}>
             {data.description}
           </div>
@@ -485,7 +484,7 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
               onClick={() => setShowDefault(!showDefault)}
               style={{
                 fontSize: 11, fontWeight: 500, color: N.ink,
-                padding: "4px 9px", borderRadius: 6,
+                padding: "4px 9px", borderRadius: 5,
                 background: "rgba(0,0,0,0.04)", border: "none",
                 cursor: "pointer", fontFamily: "inherit",
                 display: "inline-flex", alignItems: "center", gap: 5
@@ -497,9 +496,9 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
             {showDefault && (
               <div style={{
                 marginTop: 6, padding: "10px 12px",
-                background: "rgba(0,0,0,0.025)",
-                borderRadius: 7,
-                boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.06)",
+                background: "#fafafa",
+                borderRadius: 5,
+                boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
                 fontSize: 11.5, lineHeight: 1.55,
                 color: N.inkMid,
                 whiteSpace: "pre-wrap", wordBreak: "break-word",
@@ -512,9 +511,9 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
               style={{
                 marginTop: 6,
                 fontSize: 10.5, fontWeight: 500, color: N.ink,
-                padding: "3px 8px", borderRadius: 6,
-                background: "rgba(255,255,255,0.85)", border: "none",
-                boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.08)",
+                padding: "3px 8px", borderRadius: 5,
+                background: "#fff", border: "none",
+                boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)",
                 cursor: "pointer", fontFamily: "inherit"
               }}>
               Copy default → editor
@@ -552,13 +551,13 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
               disabled={saving || !data.is_customized}
               title={data.is_customized ? "Delete override, fall back to built-in default" : "Already using default"}
               style={{
-                padding: "6px 14px", borderRadius: 7, border: "none",
+                padding: "6px 14px", borderRadius: 5, border: "none",
                 background: "rgba(216,80,74,0.08)",
                 color: "#a4332e",
                 fontSize: 11.5, fontWeight: 500,
                 cursor: (saving || !data.is_customized) ? "default" : "pointer",
                 opacity: (saving || !data.is_customized) ? 0.4 : 1,
-                boxShadow: "inset 0 0 0 0.5px rgba(216,80,74,0.25)",
+                boxShadow: "inset 0 0 0 1px rgba(216,80,74,0.3)",
                 fontFamily: "inherit"
               }}>
               Reset to default
@@ -571,13 +570,13 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
               onClick={save}
               disabled={saving || !dirty}
               style={{
-                padding: "6px 14px", borderRadius: 7, border: "none",
-                background: dirty ? A.solid : "rgba(255,255,255,0.85)",
+                padding: "6px 14px", borderRadius: 5, border: "none",
+                background: dirty ? A.solid : "#fff",
                 color: dirty ? A.onAccent : N.ink,
                 fontWeight: 500, fontSize: 11.5,
                 cursor: (saving || !dirty) ? "default" : "pointer",
                 opacity: (saving || !dirty) ? 0.5 : 1,
-                boxShadow: dirty ? A.shadow : "inset 0 0 0 0.5px rgba(0,0,0,0.08)",
+                boxShadow: dirty ? "none" : "inset 0 0 0 1px rgba(0,0,0,0.12)",
                 fontFamily: "inherit"
               }}>
               Save override
@@ -596,13 +595,13 @@ function ProviderCard({ name, sub, icon, active, onClick }) {
       data-active={active ? "1" : undefined}
       style={{
         flex: 1, padding: "12px 12px 10px",
-        borderRadius: 10, cursor: "pointer",
-        background: active ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.5)",
-        boxShadow: active ? `inset 0 0 0 1.5px rgba(20,20,20,0.85)` : "inset 0 0 0 0.5px rgba(0,0,0,0.08)",
+        borderRadius: 5, cursor: "pointer",
+        background: "#fff",
+        boxShadow: active ? `inset 0 0 0 1.5px rgba(20,20,20,0.8)` : "inset 0 0 0 1px rgba(0,0,0,0.12)",
         transition: "background 0.12s, box-shadow 0.12s"
       }}>
       <div style={{
-        width: 26, height: 26, borderRadius: 7,
+        width: 26, height: 26, borderRadius: 5,
         background: "rgba(0,0,0,0.05)",
         color: N.inkDeep,
         display: "flex", alignItems: "center", justifyContent: "center",
@@ -666,9 +665,9 @@ function GeneralPane() {
       <div>
         <FieldLabel>Database stats</FieldLabel>
         <div style={{
-          padding: "10px 12px", borderRadius: 8,
-          background: "rgba(255,255,255,0.6)",
-          boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.06)",
+          padding: "10px 12px", borderRadius: 5,
+          background: "#fff",
+          boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)",
           fontSize: 11.5, color: N.ink, lineHeight: 1.6, fontFamily: "ui-monospace, SF Mono, monospace"
         }}>
           {ctx.status && ctx.status.stats
@@ -703,9 +702,9 @@ Deletion cannot be undone — only enable this when you are <i>absolutely sure</
       </div>
       <div style={{
         padding: "14px 16px",
-        borderRadius: 10,
-        background: "rgba(216,80,74,0.08)",
-        boxShadow: "inset 0 0 0 0.5px rgba(216,80,74,0.3)",
+        borderRadius: 5,
+        background: "rgba(216,80,74,0.06)",
+        boxShadow: "inset 0 0 0 1px rgba(216,80,74,0.35)",
         display: "flex", alignItems: "center", gap: 12
       }}>
         <div style={{ flex: 1 }}>
@@ -976,8 +975,8 @@ function ScheduleRow({ exp, strands, everyDays, next, on, onToggle, onStep, onRu
         <span style={{ fontSize: 10.5, color: N.inkMid }}>Every</span>
         <div style={{
           display: "inline-flex", alignItems: "stretch",
-          background: "rgba(255,255,255,0.85)", borderRadius: 6,
-          boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.1)",
+          background: "#fff", borderRadius: 5,
+          boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)",
           fontSize: 11, overflow: "hidden"
         }}>
           <button onClick={() => onStep && onStep(-1)} style={stepperBtn}>−</button>
@@ -996,11 +995,11 @@ function ScheduleRow({ exp, strands, everyDays, next, on, onToggle, onStep, onRu
           onClick={onRunNow}
           title="Create a placeholder reflection now"
           style={{
-            fontSize: 10.5, padding: "3px 8px", borderRadius: 6,
-            background: "rgba(255,255,255,0.85)",
+            fontSize: 10.5, padding: "3px 8px", borderRadius: 5,
+            background: "#fff",
             border: "none", color: N.ink, cursor: "pointer",
             fontFamily: "inherit", fontWeight: 500,
-            boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.1)"
+            boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)"
           }}>▶ Now</button>
       </div>
     </div>);

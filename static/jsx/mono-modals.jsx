@@ -159,11 +159,11 @@ function Dropzone({ files, dragging, totalSize, onPick, onDragOver, onDragLeave,
       onDragLeave={onDragLeave}
       onDrop={onDrop}
       style={{
-        borderRadius: 11, padding: filled ? 14 : 28,
-        background: dragging ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.6)",
+        borderRadius: 5, padding: filled ? 14 : 28,
+        background: dragging ? "rgba(0,0,0,0.04)" : "#fafafa",
         boxShadow: dragging
           ? `inset 0 0 0 2px ${A.solid}`
-          : "inset 0 0 0 1px rgba(0,0,0,0.1)",
+          : "inset 0 0 0 1px rgba(0,0,0,0.12)",
         backgroundImage: !filled && !dragging
           ? `repeating-linear-gradient(45deg, transparent 0 6px, rgba(0,0,0,0.04) 6px 12px)`
           : "none",
@@ -203,11 +203,11 @@ function Dropzone({ files, dragging, totalSize, onPick, onDragOver, onDragLeave,
             alignItems: "center", gap: 10, cursor: "pointer"
           }}>
           <div style={{
-            width: 48, height: 48, borderRadius: 12,
-            background: dragging ? A.solid : "rgba(255,255,255,0.85)",
+            width: 48, height: 48, borderRadius: 5,
+            background: dragging ? A.solid : "#fff",
             color: dragging ? A.onAccent : N.ink,
             display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: dragging ? "none" : "inset 0 0 0 0.5px rgba(0,0,0,0.08)",
+            boxShadow: dragging ? "none" : "inset 0 0 0 1px rgba(0,0,0,0.12)",
             transform: dragging ? "scale(1.08)" : "scale(1)",
             transition: "all 0.15s"
           }}>
@@ -237,10 +237,9 @@ function FilePreview({ file, onRemove }) {
     <div style={{ position: "relative" }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         <div style={{
-          width: 92, height: 68, borderRadius: 8,
+          width: 92, height: 68, borderRadius: 5,
           background: "linear-gradient(135deg,#3a3a3a,#1a1a1a)",
           overflow: "hidden",
-          boxShadow: "inset 0 0 0 0.5px rgba(255,255,255,0.15)"
         }}>
           {url && <img src={url} alt={file.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
         </div>
@@ -330,9 +329,9 @@ function EditPhotosModal() {
       <FieldLabel hint={`${photos.length} photo${photos.length === 1 ? "" : "s"}`}>Existing photos</FieldLabel>
       <div style={{
         padding: "12px",
-        background: "rgba(255,255,255,0.6)",
-        borderRadius: 11,
-        boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.06)"
+        background: "#fafafa",
+        borderRadius: 5,
+        boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)"
       }}>
         {listLoading && <div style={{ fontSize: 11, color: N.inkSoft }}>{listLoading}</div>}
         {!listLoading && !photos.length && (
