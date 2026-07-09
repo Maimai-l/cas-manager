@@ -534,6 +534,9 @@ function MainPanel({
           />
         )}
       </div>
+
+      {/* Flat, non-modal journal workbench — replaces the old modal chain */}
+      <window.MonoComposer />
     </Glass>);
 }
 
@@ -545,6 +548,16 @@ function ReflCard({ refl, casId, onEdit, dangerZone, onDelete, onPhotoError }) {
     ? `Photos · ${photos.length}`
     : (refl.kind === "journal" ? "Journal entry" : (refl.kind || "entry"));
   const editable = refl.kind === "journal" || refl.kind === "album";
+  const copyable = !isAlbum && !!(refl.body_text || refl.body_html);
+  const [copied, setCopied] = React.useState(null); // null | "ok" | "fail"
+
+  async function copyBody() {
+    const text = refl.body_text
+      || (() => { const d = document.createElement("div"); d.innerHTML = refl.body_html || ""; return d.textContent || ""; })();
+    const ok = await window.copyTextToClipboard(text);
+    setCopied(ok ? "ok" : "fail");
+    setTimeout(() => setCopied(null), 1600);
+  }
 
   return (
     <div className="mono-refl-card" style={{
@@ -580,6 +593,25 @@ function ReflCard({ refl, casId, onEdit, dangerZone, onDelete, onPhotoError }) {
         </div>
         {refl.is_placeholder ? <Pill accent>Placeholder</Pill> : null}
         <div style={{ flex: 1 }} />
+        {copyable && (
+          <button
+            className="mono-refl-edit"
+            onClick={copyBody}
+            title="Copy reflection text — e.g. to feed an AI chat"
+            style={{
+              fontSize: 10.5, padding: "3px 9px 3px 7px", borderRadius: 6,
+              background: copied === "fail" ? "rgba(216,80,74,0.1)" : "rgba(0,0,0,0.04)",
+              border: "none",
+              color: copied === "fail" ? "#a4332e" : N.ink,
+              cursor: "pointer",
+              display: "inline-flex", alignItems: "center", gap: 4,
+              fontFamily: "inherit",
+              transition: "background 0.15s"
+            }}>
+            <I name={copied === "ok" ? "check" : "copy"} size={10} stroke={1.8} />
+            {copied === "ok" ? "Copied" : copied === "fail" ? "Failed" : "Copy"}
+          </button>
+        )}
         {editable && (
           <button
             className="mono-refl-edit"

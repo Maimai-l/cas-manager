@@ -17,7 +17,7 @@ from typing import Iterator, Optional
 import requests
 from bs4 import BeautifulSoup
 
-from cas_errors import ScraperError, SessionExpiredError
+from cas_errors import NetworkError, ScraperError, SessionExpiredError
 
 # ── Constants ────────────────────────────────────────────────────────────────
 
@@ -289,11 +289,13 @@ def refresh_session(state_path: Path, base: str = BASE) -> dict:
     auth_token = state.get("auth_token", "")
     if not auth_token:
         raise RuntimeError("No auth_token stored. Run: cas login")
-    new_state = mb_login.refresh_with_token(auth_token, base)
+    # Merge instead of replace — the state file also carries saved credentials
+    # (email/password) that must survive a token refresh.
+    state.update(mb_login.refresh_with_token(auth_token, base))
     state_path.write_text(
-        json.dumps(new_state, ensure_ascii=False, indent=2), encoding="utf-8"
+        json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8"
     )
-    return new_state
+    return state
 
 
 def check_login(s: requests.Session, base: str = BASE) -> bool:
@@ -302,6 +304,17 @@ def check_login(s: requests.Session, base: str = BASE) -> bool:
         return not r.url.endswith("/login") and r.status_code < 400
     except Exception:
         return False
+
+
+def check_login_strict(s: requests.Session, base: str = BASE) -> bool:
+    """Like check_login, but raises NetworkError when ManageBac can't be
+    reached at all — so callers can tell 'offline' apart from 'logged out'
+    instead of treating every network hiccup as an expired session."""
+    try:
+        r = s.get(f"{base}/student", allow_redirects=True, timeout=15)
+    except requests.RequestException as e:
+        raise NetworkError(f"ManageBac unreachable: {e}") from e
+    return not r.url.endswith("/login") and r.status_code < 400
 
 
 def get_csrf(s: requests.Session, page_url: str) -> str:

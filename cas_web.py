@@ -27,7 +27,7 @@ import cas_api
 import cas_controller as ctrl
 import cas_db
 import cas_paths
-from cas_errors import ScraperError, SessionExpiredError
+from cas_errors import NetworkError, ScraperError, SessionExpiredError
 
 app = Flask(
     __name__,
@@ -174,7 +174,17 @@ def _enrich_experience(e: dict) -> dict:
 
 @app.errorhandler(SessionExpiredError)
 def handle_session_expired(e):
+    # Drop the cached session — the retried request then walks the full
+    # recovery chain (cookies → token refresh → saved-credential re-login).
+    ctrl.ctrl_invalidate_session()
     return jsonify({"ok": False, "error": "session_expired"}), 401
+
+
+@app.errorhandler(NetworkError)
+def handle_network_error(e):
+    # Offline is not logged-out: 503 keeps the frontend from asking for the
+    # password again when the network blips.
+    return jsonify({"ok": False, "error": "offline", "detail": str(e)}), 503
 
 
 @app.errorhandler(ScraperError)
@@ -277,19 +287,7 @@ def api_prompt_reset(slot: str):
 
 @app.route("/api/experiences")
 def api_experiences():
-    exps = ctrl.ctrl_list_experiences()
-    cas_db.init_db()
-    with cas_db.open_db() as conn:
-        counts = {
-            row[0]: row[1]
-            for row in conn.execute(
-                "SELECT cas_id, COUNT(*) FROM reflections GROUP BY cas_id"
-            ).fetchall()
-        }
-    for e in exps:
-        e["reflection_count"] = counts.get(e["id"], 0)
-        _enrich_experience(e)
-    return _ok(exps)
+    return _ok([_enrich_experience(e) for e in ctrl.ctrl_list_experiences()])
 
 
 @app.route("/api/experiences/<int:cas_id>")
@@ -375,17 +373,13 @@ def api_create_album(cas_id: int):
     label    = request.form.get("label", "")
     date     = request.form.get("date") or None
 
-    s, base = ctrl.ctrl_session()
-    csrf = cas_api.get_csrf(s, f"{base}/student/ib/activity/cas")
-    if lo_ids is None:
-        lo_ids = ctrl.ctrl_lo_ids_for(cas_id)
-
     photos: list[tuple[str, bytes, str]] = []
     for i, f in enumerate(files):
         cap = captions[i] if i < len(captions) else label
         photos.append((f.filename or f"photo_{i}.jpg", f.read(), cap or ""))
 
-    rid = cas_api.create_album(s, base, cas_id, csrf, lo_ids, photos, date=date)
+    rid = ctrl.ctrl_create_album_bytes(cas_id, photos, lo_ids=lo_ids,
+                                       date_str=date)
     return _ok({"rid": rid})
 
 
@@ -406,23 +400,11 @@ def api_album_add_photos(rid: int):
         caption = request.form.get("caption", "")
         if not cas_id:
             return _err("cas_id required", 400)
-        s, base = ctrl.ctrl_session()
-        csrf = cas_api.get_csrf(s, f"{base}/student/ib/activity/cas")
-        from tempfile import NamedTemporaryFile
-        for f in files:
-            suffix = Path(f.filename or "photo.jpg").suffix or ".jpg"
-            with NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-                tmp.write(f.read())
-                tmp_path = Path(tmp.name)
-            try:
-                cas_api.edit_album_add_photo(
-                    s, base, cas_id, rid, csrf, tmp_path, caption=caption
-                )
-            finally:
-                try:
-                    tmp_path.unlink()
-                except OSError:
-                    pass
+        ctrl.ctrl_add_photo_bytes_to_album(
+            cas_id, rid,
+            [(f.filename or "photo.jpg", f.read()) for f in files],
+            caption=caption,
+        )
         return _ok()
 
     # back-compat JSON path-based form
@@ -472,9 +454,6 @@ def api_delete_reflection(rid: int):
     if not ctrl.ctrl_config().get("danger_zone_enabled", False):
         return _err("Delete is disabled — enable Danger Zone in Settings first", 403)
     ctrl.ctrl_delete_reflection(cas_id, rid)
-    cas_db.init_db()
-    with cas_db.open_db() as conn:
-        cas_db.delete_reflection_local(conn, rid)
     return _ok()
 
 
@@ -651,8 +630,11 @@ def api_login_start():
         return _err("Please enter your email and password", 400)
 
     try:
+        # state includes the credentials — saved locally so the app can
+        # re-login automatically when both cookie and auth_token expire.
         state = mb_login.login_with_password(email, password, base)
         mb_login.save_state(state)
+        ctrl.ctrl_invalidate_session()
     except RuntimeError as e:
         return _err(str(e), 401)
     except Exception as e:
@@ -696,23 +678,7 @@ def api_schedule_delete(cas_id: int):
 @app.route("/api/queue")
 def api_queue():
     """Return all placeholder journal reflections across all experiences."""
-    cas_db.init_db()
-    with cas_db.open_db() as conn:
-        exps = cas_db.list_experiences(conn)
-        items = []
-        for exp in exps:
-            cas_id = exp["id"]
-            phs = cas_db.list_reflections(conn, cas_id,
-                                          kind="journal", placeholder=True)
-            for ph in phs:
-                items.append({
-                    "rid":        ph["id"],
-                    "cas_id":     cas_id,
-                    "name":       exp.get("name", ""),
-                    "group_date": ph.get("group_date", ""),
-                    "body_html":  ph.get("body_html", ""),
-                })
-    return _ok(items)
+    return _ok(ctrl.ctrl_list_placeholder_queue())
 
 
 @app.route("/api/placeholder/run", methods=["POST"])

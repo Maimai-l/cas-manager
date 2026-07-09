@@ -5,12 +5,16 @@ const AppShell = window.MonoAppShell;
 const API = window.API;
 
 function Prototype() {
-  // modal target: null | "journal-choose" | "journal-write" | "photos-new" |
-  //               "photos-edit" | "ai-1" | "ai-2" | "ai-3" |
-  //               "settings" | "placeholders"
+  // modal target: null | "photos-new" | "photos-edit" | "settings" | "placeholders"
+  // (Journal + AI flows are NOT modals anymore — they live in the flat
+  //  Composer panel docked at the bottom of the main panel.)
   const [modal, setModal] = React.useState(null);
   const [activeId, setActiveId] = React.useState(null);
   const [settingsTab, setSettingsTab] = React.useState("account");
+
+  // Composer payload: null (hidden) | { mode, casId, rid?, date?,
+  //   existingText?, initialText?, isFinal?, isPlaceholderFill? }
+  const [composer, setComposer] = React.useState(null);
 
   // ── App data ────────────────────────────────────────────────────────────
   const [status, setStatus] = React.useState({ logged_in: false, ai_provider: "prompt" });
@@ -202,6 +206,13 @@ function Prototype() {
     setModal(target);
   }, []);
 
+  // ── Composer helpers ───────────────────────────────────────────────────
+  const openComposer = React.useCallback((payload) => {
+    setComposer({ mode: "write", ...payload });
+    if (payload && payload.casId) setActiveId(payload.casId);
+  }, []);
+  const closeComposer = React.useCallback(() => setComposer(null), []);
+
   const activeExp = experiences.find((e) => e.id === activeId) || null;
 
   // Status dot color
@@ -217,6 +228,8 @@ function Prototype() {
     status, appState, syncState, config,
     experiences, activeId, activeExp, reflections, reflLoading,
     pendingCount, modalPayload,
+    // composer
+    composer, openComposer, closeComposer,
     // setters
     setActiveId, setModalPayload,
     // mutations
@@ -225,13 +238,8 @@ function Prototype() {
   };
 
   let modalEl = null;
-  if      (modal === "journal-choose") modalEl = <window.NewJournalModal_Mono mode="choose" />;
-  else if (modal === "journal-write")  modalEl = <window.NewJournalModal_Mono mode="write" />;
-  else if (modal === "photos-new")     modalEl = <window.NewPhotosModal_Mono />;
+  if      (modal === "photos-new")     modalEl = <window.NewPhotosModal_Mono />;
   else if (modal === "photos-edit")    modalEl = <window.EditPhotosModal_Mono />;
-  else if (modal === "ai-1")           modalEl = <window.AIGenerateModal_Mono step={1} />;
-  else if (modal === "ai-2")           modalEl = <window.AIGenerateModal_Mono step={2} />;
-  else if (modal === "ai-3")           modalEl = <window.AIGenerateModal_Mono step={3} />;
   else if (modal === "settings")       modalEl = <window.SettingsModal_Mono tab={settingsTab} onTab={setSettingsTab} />;
   else if (modal === "placeholders")   modalEl = <window.PlaceholderHubModal_Mono />;
 
@@ -252,13 +260,22 @@ function Prototype() {
           dotKind={dotKind}
           appState={appState}
           onSelect={setActiveId}
-          onOpenJournal={() => setModal("journal-choose")}
+          onOpenJournal={() => openComposer({ mode: "write", casId: activeId })}
           onOpenPhotos={() => setModal("photos-new")}
           onOpenSettings={() => setModal("settings")}
           onOpenPlaceholders={() => setModal("placeholders")}
           onEditRefl={(r) => {
-            setModalPayload({ rid: r.id, casId: activeId, refl: r });
-            setModal(r.kind === "album" ? "photos-edit" : "journal-write");
+            if (r.kind === "album") {
+              setModalPayload({ rid: r.id, casId: activeId, refl: r });
+              setModal("photos-edit");
+            } else {
+              const plain = r.body_text || "";
+              openComposer({
+                mode: "write", casId: activeId, rid: r.id,
+                date: r.date_iso || null,
+                existingText: plain, initialText: plain,
+              });
+            }
           }}
         />
         {modalEl}
