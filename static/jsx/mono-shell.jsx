@@ -1,8 +1,14 @@
-// ── Mono shell: sidebar + main panel + reflection card + base components ─
+// ── Mono shell: sidebar + main panel + reflection rows + base components ─
+// Layout model (macOS Notes-like): full-bleed columns joined edge-to-edge
+// with 1px separators — no floating panels, no gaps. Containers are square;
+// controls (buttons, inputs, chips) keep a small 4–5px radius.
 const I = window.I;
 const A = window.MONO_ACCENT;
 const N = window.MONO_NEUTRALS;
 const S = window.MONO_STRAND;
+
+const SEP = "1px solid rgba(0,0,0,0.10)";   // column / section separator
+const R   = 5;                               // control corner radius
 
 // Pull the experience's strand list as a canonical-order array of valid keys.
 // Falls back to ["activity"] if nothing usable is present so the existing
@@ -25,43 +31,17 @@ function _primaryStrand(exp) {
 }
 
 // ── Atoms ────────────────────────────────────────────────────────────────
+// Kept for API compatibility: plain solid surface now (no blur, no blobs).
 function GradientBg({ children }) {
   return (
-    <div style={{
-      position: "absolute", inset: 0, overflow: "hidden",
-      background: N.bg
-    }}>
-      <div style={{
-        position: "absolute", top: "-20%", left: "-15%",
-        width: 600, height: 600, borderRadius: "50%",
-        background: "radial-gradient(circle, rgba(0,0,0,0.04) 0%, transparent 65%)",
-        filter: "blur(40px)"
-      }} />
-      <div style={{
-        position: "absolute", top: "5%", right: "-10%",
-        width: 540, height: 540, borderRadius: "50%",
-        background: "radial-gradient(circle, rgba(177,226,69,0.12) 0%, transparent 65%)",
-        filter: "blur(40px)"
-      }} />
-      <div style={{
-        position: "absolute", bottom: "-20%", left: "20%",
-        width: 480, height: 480, borderRadius: "50%",
-        background: "radial-gradient(circle, rgba(0,0,0,0.035) 0%, transparent 65%)",
-        filter: "blur(40px)"
-      }} />
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden", background: N.bg }}>
       {children}
     </div>);
 }
 
-function Glass({ style, children, blur = 38, ...rest }) {
+function Glass({ style, children, blur, ...rest }) {
   return (
-    <div style={{
-      background: N.glass,
-      backdropFilter: `blur(${blur}px) saturate(180%)`,
-      WebkitBackdropFilter: `blur(${blur}px) saturate(180%)`,
-      boxShadow: "inset 0 0 0 0.5px rgba(255,255,255,0.7), inset 0 0 0 0.5px rgba(0,0,0,0.04)",
-      ...style
-    }} {...rest}>{children}</div>);
+    <div style={{ background: "#fff", ...style }} {...rest}>{children}</div>);
 }
 
 function Pill({ children, accent, style }) {
@@ -69,10 +49,10 @@ function Pill({ children, accent, style }) {
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 4,
       fontSize: 10.5, fontWeight: 500,
-      padding: "2px 8px", borderRadius: 99,
+      padding: "2px 8px", borderRadius: 4,
       background: accent ? A.solid : N.chipBg,
       color: accent ? A.onAccent : N.inkMid,
-      whiteSpace: "nowrap",
+      whiteSpace: "nowrap", flexShrink: 0,
       ...style
     }}>{children}</span>);
 }
@@ -80,9 +60,7 @@ function Pill({ children, accent, style }) {
 // Accepts either:
 //   strand:  "activity"             (single strand, legacy)
 //   strands: ["creativity","activity"]  (canonical-order array)
-// Renders one icon + one label for single-strand, or stacked icons +
-// "Creativity · Activity" label for multi-strand. No new icons added —
-// just reuses the 3 existing strand glyphs.
+// Anchored: never wraps, never shrinks — stays where it's put.
 function StrandTag({ strand, strands, compact, style }) {
   const list = (strands && strands.length)
     ? strands.filter((s) => S[s])
@@ -95,7 +73,7 @@ function StrandTag({ strand, strands, compact, style }) {
     return (
       <span title={tooltip} style={{
         height: 20, padding: list.length > 1 ? "0 5px" : 0,
-        minWidth: 20, borderRadius: 6,
+        minWidth: 20, borderRadius: 4,
         background: N.chipBg, color: N.ink,
         display: "inline-flex", alignItems: "center", justifyContent: "center",
         gap: 3,
@@ -108,8 +86,9 @@ function StrandTag({ strand, strands, compact, style }) {
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 5,
       fontSize: 11, fontWeight: 500,
-      padding: "2.5px 9px 2.5px 7px", borderRadius: 99,
+      padding: "2.5px 9px 2.5px 7px", borderRadius: 4,
       background: N.chipBg, color: N.ink,
+      whiteSpace: "nowrap", flexShrink: 0,
       ...style
     }}>
       {list.map((s) => <I key={s} name={S[s].icon} size={11} stroke={1.7} />)}
@@ -117,30 +96,26 @@ function StrandTag({ strand, strands, compact, style }) {
     </span>);
 }
 
-// Buttons — primary = solid accent, secondary = white glass, ghost = transparent.
+// Buttons — macOS-like: small radius, solid fills, hairline border.
 function Btn({ children, primary, ghost, icon, iconRight, onClick, style, title, disabled }) {
   const base = {
-    padding: "5px 12px", borderRadius: 7, border: "none",
+    padding: "5px 12px", borderRadius: R, border: "none",
     fontSize: 11.5, fontWeight: 500,
     cursor: disabled ? "default" : "pointer",
     opacity: disabled ? 0.5 : 1,
     display: "inline-flex", alignItems: "center", gap: 5,
+    whiteSpace: "nowrap", flexShrink: 0,
     fontFamily: "inherit"
   };
   let look = {};
   if (primary) {
-    look = {
-      background: A.solid, color: A.onAccent,
-      fontWeight: 500, boxShadow: A.shadow
-    };
+    look = { background: A.solid, color: A.onAccent };
   } else if (ghost) {
-    look = {
-      background: "transparent", color: N.ink
-    };
+    look = { background: "transparent", color: N.ink };
   } else {
     look = {
-      background: "rgba(255,255,255,0.85)", color: N.ink,
-      boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.08)"
+      background: "#fff", color: N.ink,
+      boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)"
     };
   }
   return (
@@ -161,10 +136,9 @@ function PhotoThumb({ url, caption, w = 88, h = 64, onLoadError }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       <div style={{
-        width: w, height: h, borderRadius: 8,
+        width: w, height: h, borderRadius: R,
         background: "linear-gradient(135deg,#3a3a3a,#1a1a1a)",
         position: "relative", overflow: "hidden",
-        boxShadow: "inset 0 0 0 0.5px rgba(255,255,255,0.15)"
       }}>
         {url && !errored ? (
           <img
@@ -199,10 +173,9 @@ function MonoPhoto({ caption, idx, w = 88, h = 64 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       <div style={{
-        width: w, height: h, borderRadius: 8,
+        width: w, height: h, borderRadius: R,
         background: `linear-gradient(135deg, ${tint} 0%, ${tint}99 100%)`,
         position: "relative", overflow: "hidden",
-        boxShadow: "inset 0 0 0 0.5px rgba(255,255,255,0.15)"
       }}>
         <div style={{
           position: "absolute", left: 0, right: 0, bottom: 0, height: "45%",
@@ -235,17 +208,19 @@ function Sidebar({ experiences, activeId, onSelect, syncState }) {
   const completed = filtered.filter((e) =>  e.is_completed && !e.is_deleted);
   const deleted   = filtered.filter((e) =>  e.is_deleted);
   return (
-    <Glass style={{
-      width: 240, borderRadius: 14,
+    <div style={{
+      width: 230, flexShrink: 0,
+      background: "#f4f4f3",
+      borderRight: SEP,
       display: "flex", flexDirection: "column", overflow: "hidden"
     }}>
-      <div style={{ padding: "12px 14px 6px" }}>
+      <div style={{ padding: "10px 10px 8px" }}>
         <div style={{
           display: "flex", alignItems: "center", gap: 6,
-          height: 26, padding: "0 9px",
-          background: "rgba(255,255,255,0.75)",
+          height: 26, padding: "0 8px",
+          background: "rgba(0,0,0,0.055)",
+          borderRadius: R + 1,
           fontSize: 11.5,
-          boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.06)"
         }}>
           <I name="search" size={12} stroke={1.8} style={{ color: N.inkSoft }} />
           <input
@@ -261,7 +236,7 @@ function Sidebar({ experiences, activeId, onSelect, syncState }) {
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", padding: "8px 0 10px" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "2px 0 10px" }}>
         {active.map((e) =>
           <SidebarItem key={e.id} exp={e} active={e.id === activeId} onClick={() => onSelect(e.id)} />
         )}
@@ -272,8 +247,8 @@ function Sidebar({ experiences, activeId, onSelect, syncState }) {
         )}
         {completed.length > 0 && (
           <div style={{
-            margin: "10px 16px 4px", paddingTop: 8,
-            borderTop: "0.5px solid " + N.hairline,
+            margin: "10px 14px 4px", paddingTop: 8,
+            borderTop: SEP,
             fontSize: 10.5, color: N.inkSoft
           }}>Completed</div>
         )}
@@ -282,8 +257,8 @@ function Sidebar({ experiences, activeId, onSelect, syncState }) {
         )}
         {deleted.length > 0 && (
           <div style={{
-            margin: "10px 16px 4px", paddingTop: 8,
-            borderTop: "0.5px solid " + N.hairline,
+            margin: "10px 14px 4px", paddingTop: 8,
+            borderTop: SEP,
             fontSize: 10.5, color: "#a4332e"
           }}>Deleted</div>
         )}
@@ -291,56 +266,7 @@ function Sidebar({ experiences, activeId, onSelect, syncState }) {
           <SidebarItem key={e.id} exp={e} active={e.id === activeId} onClick={() => onSelect(e.id)} />
         )}
       </div>
-    </Glass>);
-}
-
-// Top-right toolbar (Online pill, sync icon, tray, settings)
-const _TOOLBAR_BTN_STYLE = {
-  width: 28, height: 28, borderRadius: 7,
-  border: "none", background: "rgba(255,255,255,0.6)",
-  color: "rgba(20,20,20,0.6)", cursor: "pointer",
-  display: "flex", alignItems: "center", justifyContent: "center",
-  boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.06)",
-  fontFamily: "inherit",
-  transition: "background 0.12s, color 0.12s"
-};
-
-function TopRightToolbar({ dotKind, onOpenSettings }) {
-  const dotColor =
-    dotKind === "green"  ? "#b1e245" :
-    dotKind === "yellow" ? "#e7c64a" : "#d8504a";
-  const dotLabel =
-    dotKind === "green"  ? "Online" :
-    dotKind === "yellow" ? "Syncing" : "Offline";
-  return (
-    <div style={{
-      position: "absolute", top: 14, right: 18, zIndex: 4,
-      display: "flex", alignItems: "center", gap: 10
-    }}>
-      <span
-        title={`Status: ${dotLabel}`}
-        style={{
-          display: "inline-flex", alignItems: "center", gap: 6,
-          height: 28, padding: "0 12px 0 10px",
-          background: "rgba(255,255,255,0.7)",
-          boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.07)",
-          fontSize: 11, fontWeight: 500, color: N.ink,
-          letterSpacing: 0.1, lineHeight: 1,
-        }}>
-        <span style={{
-          width: 8, height: 8,
-          background: dotColor,
-        }} />
-        {dotLabel}
-      </span>
-      <button
-        title="Settings"
-        onClick={onOpenSettings}
-        style={_TOOLBAR_BTN_STYLE}>
-        <I name="settings" size={15} stroke={1.7} />
-      </button>
-    </div>
-  );
+    </div>);
 }
 
 function SidebarItem({ exp, active, onClick }) {
@@ -359,13 +285,11 @@ function SidebarItem({ exp, active, onClick }) {
       onClick={onClick}
       title={isDeleted ? "Not seen in the latest ManageBac sync" : undefined}
       style={{
-        display: "flex", alignItems: "center", gap: 10,
-        padding: "7px 10px 7px 11px", borderRadius: 7,
-        margin: "1px 8px", cursor: "pointer",
-        background: active ? "rgba(255,255,255,0.85)" : "transparent",
-        boxShadow: active ? "inset 0 0 0 0.5px rgba(0,0,0,0.07), inset 3px 0 0 0 " + A.solid : "none",
+        display: "flex", alignItems: "center", gap: 9,
+        padding: "7px 10px", borderRadius: R + 1,
+        margin: "1px 6px", cursor: "pointer",
+        background: active ? "rgba(0,0,0,0.08)" : "transparent",
         opacity: isDeleted ? 0.5 : 1,
-        position: "relative",
         transition: "background 0.12s, opacity 0.12s"
       }}>
       <I name={meta.icon} size={13} stroke={1.7} style={{ color: N.inkMid, flexShrink: 0 }} />
@@ -376,17 +300,67 @@ function SidebarItem({ exp, active, onClick }) {
           whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
           textDecoration: isDeleted ? "line-through" : "none",
         }}>{exp.name || `Experience ${exp.id}`}</div>
-        <div style={{ fontSize: 10, color: N.inkSoft, marginTop: 1 }}>
+        <div style={{ fontSize: 10, color: N.inkSoft, marginTop: 1,
+                      whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {subline}
         </div>
       </div>
       <span className="tnum" style={{
-        fontSize: 10.5, padding: "1px 0", borderRadius: 99,
-        background: N.chipBg, color: N.inkMid,
-        fontWeight: 500,
-        width: 26, textAlign: "center", flexShrink: 0
+        fontSize: 10.5, color: N.inkSoft,
+        width: 22, textAlign: "right", flexShrink: 0
       }}>{exp.reflection_count || 0}</span>
     </div>);
+}
+
+// ── Toolbar — a real in-flow bar at the top of the main column ───────────
+const _TOOLBAR_BTN_STYLE = {
+  width: 26, height: 26, borderRadius: R,
+  border: "none", background: "transparent",
+  color: "rgba(20,20,20,0.6)", cursor: "pointer",
+  display: "flex", alignItems: "center", justifyContent: "center",
+  flexShrink: 0,
+  fontFamily: "inherit",
+  transition: "background 0.12s, color 0.12s"
+};
+
+function Toolbar({ dotKind, onOpenSettings, children }) {
+  const dotColor =
+    dotKind === "green"  ? "#8bc34a" :
+    dotKind === "yellow" ? "#e7c64a" : "#d8504a";
+  const dotLabel =
+    dotKind === "green"  ? "Online" :
+    dotKind === "yellow" ? "Syncing" : "Offline";
+  return (
+    <div style={{
+      height: 42, flexShrink: 0,
+      display: "flex", alignItems: "center", gap: 8,
+      padding: "0 14px",
+      borderBottom: SEP,
+      background: "#fafafa",
+    }}>
+      <span
+        title={`Status: ${dotLabel}`}
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 6,
+          fontSize: 11, color: N.inkMid, flexShrink: 0,
+        }}>
+        <span style={{
+          width: 8, height: 8, borderRadius: "50%",
+          background: dotColor,
+        }} />
+        {dotLabel}
+      </span>
+      <div style={{ flex: 1 }} />
+      {children}
+      <button
+        title="Settings"
+        onClick={onOpenSettings}
+        className="mono-tray"
+        style={_TOOLBAR_BTN_STYLE}>
+        <I name="settings" size={15} stroke={1.7} />
+      </button>
+    </div>
+  );
 }
 
 // ── Main panel ──────────────────────────────────────────────────────────
@@ -396,107 +370,100 @@ function MainPanel({
   onOpenSettings, onOpenPlaceholders, pendingCount,
   dangerZone, onDeleteRefl, appState, dotKind
 }) {
-  const toolbar = (
-    <TopRightToolbar
-      dotKind={dotKind}
-      onOpenSettings={onOpenSettings}
-    />
-  );
+  const frame = {
+    flex: 1, minWidth: 0,
+    background: "#fff",
+    display: "flex", flexDirection: "column", overflow: "hidden",
+  };
 
   if (appState === "unauthed") {
     return (
-      <Glass style={{
-        flex: 1, borderRadius: 14, overflow: "hidden", position: "relative",
-        display: "flex", alignItems: "center", justifyContent: "center"
-      }}>
-        {toolbar}
-        <div style={{ textAlign: "center", maxWidth: 360, color: N.inkMid, padding: 24 }}>
-          <div style={{ fontSize: 16, fontWeight: 500, color: N.inkDeep, marginBottom: 6 }}>Not logged into ManageBac</div>
-          <div style={{ fontSize: 12, lineHeight: 1.55 }}>
-            Click the ⚙ in the top-right corner to open Settings, Account, enter your ManageBac credentials, and then data can be synced.
+      <div style={frame}>
+        <Toolbar dotKind={dotKind} onOpenSettings={onOpenSettings} />
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ textAlign: "center", maxWidth: 360, color: N.inkMid, padding: 24 }}>
+            <div style={{ fontSize: 15, fontWeight: 500, color: N.inkDeep, marginBottom: 6 }}>Not logged into ManageBac</div>
+            <div style={{ fontSize: 12, lineHeight: 1.55 }}>
+              Open Settings (⚙ top right) → Account, enter your ManageBac credentials, and your data will sync.
+            </div>
           </div>
         </div>
-      </Glass>
+      </div>
     );
   }
   if (!activeExp) {
     return (
-      <Glass style={{
-        flex: 1, borderRadius: 14, overflow: "hidden", position: "relative",
-        display: "flex", alignItems: "center", justifyContent: "center"
-      }}>
-        {toolbar}
-        <div style={{ textAlign: "center", color: N.inkSoft, fontSize: 12 }}>
+      <div style={frame}>
+        <Toolbar dotKind={dotKind} onOpenSettings={onOpenSettings} />
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+                      color: N.inkSoft, fontSize: 12 }}>
           {reflLoading ? "Loading…" : "Select an experience from the sidebar."}
         </div>
-      </Glass>
+      </div>
     );
   }
   const strands = _strandsOf(activeExp);
   const los     = activeExp.lo_display || [];
   return (
-    <Glass style={{
-      flex: 1, borderRadius: 14, overflow: "hidden",
-      display: "flex", flexDirection: "column", position: "relative"
-    }}>
-      {toolbar}
-      <div style={{
-        padding: "16px 22px 14px",
-        borderBottom: "0.5px solid " + N.hairline,
-        display: "flex", alignItems: "flex-end", gap: 14
-      }}>
-        {/* paddingRight reserves room for the absolute-positioned toolbar */}
-        <div style={{ flex: 1, minWidth: 0, paddingRight: 200 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <StrandTag strands={strands} />
-            <span style={{ fontSize: 11, color: N.inkSoft }}>· {activeExp.reflection_count || 0} reflections</span>
-          </div>
-          <h2 style={{ margin: "6px 0 0", fontSize: 21, fontWeight: 500, letterSpacing: -0.3, color: N.inkDeep }}>
-            {activeExp.name || `Experience ${activeExp.id}`}
-          </h2>
-          <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {los.map((lo) =>
-              <span key={lo} style={{
-                fontSize: 10.5, padding: "2px 8px", borderRadius: 99,
-                background: "rgba(0,0,0,0.04)", color: N.inkMid
-              }}>{lo}</span>
-            )}
-          </div>
-        </div>
-        {/* Action buttons — hidden for completed experiences (ManageBac
-            rejects new reflections on locked CAS activities). A muted
-            "Completed" pill takes their place so the user still knows why. */}
+    <div style={frame}>
+      <Toolbar dotKind={dotKind} onOpenSettings={onOpenSettings}>
         {activeExp.is_completed ? (
-          <div style={{ alignSelf: "flex-end" }}>
-            <span style={{
-              display: "inline-flex", alignItems: "center", gap: 5,
-              fontSize: 11, fontWeight: 500,
-              padding: "4px 10px", borderRadius: 99,
-              background: "rgba(0,0,0,0.05)", color: N.inkMid,
-            }}>
-              <I name="check" size={11} stroke={2} />
-              Completed · read-only
-            </span>
-          </div>
+          <Pill>
+            <I name="check" size={11} stroke={2} />
+            Completed · read-only
+          </Pill>
         ) : (
-          <div style={{ display: "flex", gap: 8, alignSelf: "flex-end" }}>
+          <React.Fragment>
             <Btn icon="pen"   onClick={onOpenJournal}>+ New Journal</Btn>
             <Btn icon="image" onClick={onOpenPhotos}>+ New Photo</Btn>
-          </div>
+          </React.Fragment>
         )}
+      </Toolbar>
+
+      {/* Header — title, then one anchored meta line (never wraps) */}
+      <div style={{
+        padding: "14px 22px 12px",
+        borderBottom: SEP,
+        flexShrink: 0,
+      }}>
+        <h2 style={{
+          margin: 0, fontSize: 20, fontWeight: 500, letterSpacing: -0.3,
+          color: N.inkDeep,
+          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+        }}>
+          {activeExp.name || `Experience ${activeExp.id}`}
+        </h2>
+        <div style={{
+          marginTop: 7,
+          display: "flex", alignItems: "center", gap: 6,
+          whiteSpace: "nowrap", overflow: "hidden",
+        }}>
+          <StrandTag strands={strands} />
+          <span style={{ fontSize: 11, color: N.inkSoft, flexShrink: 0 }}>
+            · {activeExp.reflection_count || 0} reflections
+          </span>
+          {los.map((lo) =>
+            <span key={lo} style={{
+              fontSize: 10.5, padding: "2.5px 8px", borderRadius: 4,
+              background: "rgba(0,0,0,0.04)", color: N.inkMid,
+              whiteSpace: "nowrap", flexShrink: 0,
+            }}>{lo}</span>
+          )}
+        </div>
       </div>
 
-      <div style={{ flex: 1, overflow: "auto", padding: "16px 22px", display: "flex", flexDirection: "column", gap: 10 }}>
+      {/* Reflection rows — flat, joined with hairlines (no floating cards) */}
+      <div style={{ flex: 1, overflow: "auto" }}>
         {reflLoading ? (
-          <div style={{ color: N.inkSoft, fontSize: 11, padding: 8 }}>Loading reflections…</div>
+          <div style={{ color: N.inkSoft, fontSize: 11, padding: "12px 22px" }}>Loading reflections…</div>
         ) : null}
         {(!reflLoading && !reflections.length) ? (
-          <div style={{ color: N.inkSoft, fontSize: 12, padding: 24, textAlign: "center" }}>
+          <div style={{ color: N.inkSoft, fontSize: 12, padding: 32, textAlign: "center" }}>
             No reflections yet. Use <b>+ New Journal</b> or <b>+ New Photo</b> above to add the first one.
           </div>
         ) : null}
         {reflections.map((r) =>
-          <ReflCard
+          <ReflRow
             key={r.id}
             refl={r}
             casId={activeExp.id}
@@ -510,10 +477,33 @@ function MainPanel({
 
       {/* Flat, non-modal journal workbench — replaces the old modal chain */}
       <window.MonoComposer />
-    </Glass>);
+    </div>);
 }
 
-function ReflCard({ refl, casId, onEdit, dangerZone, onDelete, onPhotoError }) {
+// Small fixed-width action button for reflection rows: the label swap
+// (Copy → Copied) must not shift its neighbours.
+function RowBtn({ icon, label, onClick, danger, title, width = 62 }) {
+  return (
+    <button
+      className="mono-refl-edit"
+      onClick={onClick}
+      title={title}
+      style={{
+        fontSize: 10.5, height: 22, width, borderRadius: R - 1,
+        background: danger ? "rgba(216,80,74,0.1)" : "rgba(0,0,0,0.04)",
+        border: "none",
+        color: danger ? "#a4332e" : N.ink,
+        cursor: "pointer",
+        display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4,
+        whiteSpace: "nowrap", flexShrink: 0,
+        fontFamily: "inherit",
+        transition: "background 0.15s"
+      }}>
+      <I name={icon} size={10} stroke={1.8} /> {label}
+    </button>);
+}
+
+function ReflRow({ refl, casId, onEdit, dangerZone, onDelete, onPhotoError }) {
   const isAlbum  = refl.kind === "album";
   const photos   = refl.photo_list || [];
   const dateStr  = refl.date_iso || refl.group_date || "";
@@ -534,15 +524,10 @@ function ReflCard({ refl, casId, onEdit, dangerZone, onDelete, onPhotoError }) {
 
   return (
     <div className="mono-refl-card" style={{
-      background: N.card,
-      backdropFilter: "blur(20px) saturate(170%)",
-      WebkitBackdropFilter: "blur(20px) saturate(170%)",
-      borderRadius: 11,
-      boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.04)",
-      opacity: refl.is_placeholder ? 0.82 : 1,
-      overflow: "hidden", position: "relative",
-      flexShrink: 0,
-      transition: "background 0.15s, box-shadow 0.15s"
+      borderBottom: SEP,
+      opacity: refl.is_placeholder ? 0.85 : 1,
+      position: "relative",
+      transition: "background 0.15s"
     }}>
       {refl.is_placeholder ? (
         <div style={{
@@ -550,76 +535,33 @@ function ReflCard({ refl, casId, onEdit, dangerZone, onDelete, onPhotoError }) {
           background: A.solid
         }} />
       ) : null}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 14px 7px" }}>
-        <div style={{
-          width: 24, height: 24, borderRadius: 6,
-          background: "rgba(0,0,0,0.05)", color: N.inkMid,
-          display: "flex", alignItems: "center", justifyContent: "center"
-        }}>
-          <I name={isAlbum ? "image" : "pen"} size={13} stroke={1.6} />
-        </div>
-        <div>
-          <div className="tnum" style={{ fontSize: 12, fontWeight: 500, color: N.inkDeep }}>
-            {dateStr || "—"}
-          </div>
-          <div style={{ fontSize: 10, color: N.inkSoft }}>{subline}</div>
-        </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 22px 6px" }}>
+        <I name={isAlbum ? "image" : "pen"} size={13} stroke={1.6}
+           style={{ color: N.inkSoft, flexShrink: 0 }} />
+        <span className="tnum" style={{ fontSize: 12, fontWeight: 500, color: N.inkDeep, flexShrink: 0 }}>
+          {dateStr || "—"}
+        </span>
+        <span style={{ fontSize: 10.5, color: N.inkSoft, flexShrink: 0 }}>{subline}</span>
         {refl.is_placeholder ? <Pill accent>Placeholder</Pill> : null}
         <div style={{ flex: 1 }} />
         {copyable && (
-          <button
-            className="mono-refl-edit"
-            onClick={copyBody}
+          <RowBtn
+            icon={copied === "ok" ? "check" : "copy"}
+            label={copied === "ok" ? "Copied" : copied === "fail" ? "Failed" : "Copy"}
+            danger={copied === "fail"}
             title="Copy reflection text — e.g. to feed an AI chat"
-            style={{
-              fontSize: 10.5, padding: "3px 9px 3px 7px", borderRadius: 6,
-              background: copied === "fail" ? "rgba(216,80,74,0.1)" : "rgba(0,0,0,0.04)",
-              border: "none",
-              color: copied === "fail" ? "#a4332e" : N.ink,
-              cursor: "pointer",
-              display: "inline-flex", alignItems: "center", gap: 4,
-              fontFamily: "inherit",
-              transition: "background 0.15s"
-            }}>
-            <I name={copied === "ok" ? "check" : "copy"} size={10} stroke={1.8} />
-            {copied === "ok" ? "Copied" : copied === "fail" ? "Failed" : "Copy"}
-          </button>
+            onClick={copyBody}
+          />
         )}
-        {editable && (
-          <button
-            className="mono-refl-edit"
-            onClick={onEdit}
-            style={{
-              fontSize: 10.5, padding: "3px 9px 3px 7px", borderRadius: 6,
-              background: "rgba(0,0,0,0.04)", border: "none",
-              color: N.ink, cursor: "pointer",
-              display: "inline-flex", alignItems: "center", gap: 4,
-              fontFamily: "inherit",
-              transition: "background 0.15s"
-            }}>
-            <I name="pen" size={10} stroke={1.8} /> Edit
-          </button>
-        )}
+        {editable && <RowBtn icon="pen" label="Edit" onClick={onEdit} width={54} />}
         {dangerZone && (
-          <button
-            className="mono-refl-edit"
-            onClick={onDelete}
-            title="Delete reflection (Danger Zone)"
-            style={{
-              fontSize: 10.5, padding: "3px 9px 3px 7px", borderRadius: 6,
-              background: "rgba(216,80,74,0.1)", border: "none",
-              color: "#a4332e", cursor: "pointer",
-              display: "inline-flex", alignItems: "center", gap: 4,
-              fontFamily: "inherit",
-              transition: "background 0.15s"
-            }}>
-            <I name="trash" size={10} stroke={1.8} /> Delete
-          </button>
+          <RowBtn icon="trash" label="Delete" danger width={64}
+                  title="Delete reflection (Danger Zone)" onClick={onDelete} />
         )}
       </div>
       {isAlbum ? (
         photos.length ? (
-          <div style={{ padding: "4px 14px 12px", display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <div style={{ padding: "4px 22px 12px", display: "flex", gap: 8, flexWrap: "wrap" }}>
             {photos.map((p) =>
               <PhotoThumb
                 key={p.id}
@@ -630,18 +572,18 @@ function ReflCard({ refl, casId, onEdit, dangerZone, onDelete, onPhotoError }) {
             )}
           </div>
         ) : (
-          <div style={{ padding: "0 14px 12px", fontSize: 11.5, color: N.inkSoft, fontStyle: "italic" }}>
+          <div style={{ padding: "0 22px 10px", fontSize: 11.5, color: N.inkSoft, fontStyle: "italic" }}>
             (empty album — try Sync)
           </div>
         )
       ) : (
         refl.body_html ? (
           <div style={{
-            padding: "0 14px 12px", fontSize: 12.5, lineHeight: 1.6,
+            padding: "0 22px 10px", fontSize: 12.5, lineHeight: 1.6,
             color: N.ink
           }} dangerouslySetInnerHTML={{ __html: refl.body_html }} />
         ) : (
-          <div style={{ padding: "0 14px 12px", fontSize: 11.5, color: N.inkSoft, fontStyle: "italic" }}>
+          <div style={{ padding: "0 22px 10px", fontSize: 11.5, color: N.inkSoft, fontStyle: "italic" }}>
             (no body — try Sync)
           </div>
         )
@@ -664,41 +606,35 @@ function AppShell(props) {
   }, [ctx, props.activeId]);
   return (
     <div style={{
-      width: "100%", height: "100%", position: "relative",
+      width: "100%", height: "100%",
+      display: "flex", alignItems: "stretch",
       overflow: "hidden",
-      background: N.bg
+      background: "#fff"
     }}>
-      <GradientBg>
-        <div style={{
-          position: "absolute", top: 14, bottom: 14, left: 14, right: 14,
-          display: "flex", gap: 14
-        }}>
-          <Sidebar
-            experiences={props.experiences}
-            activeId={props.activeId}
-            onSelect={props.onSelect}
-            syncState={ctx.syncState}
-          />
-          <MainPanel
-            activeExp={props.activeExp}
-            reflections={props.reflections}
-            reflLoading={props.reflLoading}
-            onOpenJournal={props.onOpenJournal}
-            onOpenPhotos={props.onOpenPhotos}
-            onEditRefl={props.onEditRefl}
-            onSyncOne={ctx.syncOne}
-            onOpenSettings={props.onOpenSettings}
-            onOpenPlaceholders={props.onOpenPlaceholders}
-            pendingCount={props.pendingCount}
-            dotKind={props.dotKind}
-            dangerZone={dangerZone}
-            onDeleteRefl={onDeleteRefl}
-            appState={props.appState}
-          />
-          {/* Placeholder Hub — permanent rail strip, expands into a panel */}
-          <window.MonoPlaceholderPanel />
-        </div>
-      </GradientBg>
+      <Sidebar
+        experiences={props.experiences}
+        activeId={props.activeId}
+        onSelect={props.onSelect}
+        syncState={ctx.syncState}
+      />
+      <MainPanel
+        activeExp={props.activeExp}
+        reflections={props.reflections}
+        reflLoading={props.reflLoading}
+        onOpenJournal={props.onOpenJournal}
+        onOpenPhotos={props.onOpenPhotos}
+        onEditRefl={props.onEditRefl}
+        onSyncOne={ctx.syncOne}
+        onOpenSettings={props.onOpenSettings}
+        onOpenPlaceholders={props.onOpenPlaceholders}
+        pendingCount={props.pendingCount}
+        dotKind={props.dotKind}
+        dangerZone={dangerZone}
+        onDeleteRefl={onDeleteRefl}
+        appState={props.appState}
+      />
+      {/* Placeholder Hub — permanent rail strip, expands into a panel */}
+      <window.MonoPlaceholderPanel />
     </div>);
 }
 
@@ -709,3 +645,5 @@ window.MonoStrandTag = StrandTag;
 window.MonoPhoto = MonoPhoto;
 window.MonoPhotoThumb = PhotoThumb;
 window.MonoGlass = Glass;
+window.MONO_SEP = SEP;
+window.MONO_R = R;

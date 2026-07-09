@@ -43,9 +43,9 @@ const taStyle = (h) => ({
 });
 
 const boxStyle = {
-  background: "rgba(255,255,255,0.78)",
-  borderRadius: 8,
-  boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.1)",
+  background: "#fff",
+  borderRadius: 5,
+  boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)",
 };
 
 // Small button that flips to "Copied ✓" / "Copy failed" for a moment.
@@ -64,10 +64,15 @@ function CopyBtn({ getText, label = "Copy", primary, icon = "copy", disabled, on
     setState(ok ? "ok" : "fail");
     setTimeout(() => setState(null), 1600);
   }
+  // Fixed width so the label swap (Copy prompt → Copied ✓) never reflows
+  // the row around it.
+  const anchored = { width: 118, justifyContent: "center", whiteSpace: "nowrap" };
   return (
     <Btn icon={state === "ok" ? "check" : icon} primary={primary}
          onClick={handle} disabled={disabled}
-         style={state === "fail" ? { background: "rgba(216,80,74,0.12)", color: "#a4332e" } : undefined}>
+         style={state === "fail"
+           ? { ...anchored, background: "rgba(216,80,74,0.12)", color: "#a4332e" }
+           : anchored}>
       {state === "ok" ? "Copied ✓" : state === "fail" ? "Copy failed" : label}
     </Btn>
   );
@@ -77,12 +82,13 @@ function TabBtn({ active, icon, children, onClick }) {
   return (
     <button onClick={onClick} style={{
       display: "inline-flex", alignItems: "center", gap: 5,
-      padding: "4px 11px", borderRadius: 6, border: "none",
+      padding: "4px 11px", borderRadius: 5, border: "none",
       fontSize: 11.5, fontWeight: 500,
-      background: active ? "rgba(255,255,255,0.95)" : "transparent",
+      background: active ? "#fff" : "transparent",
       color: active ? N.inkDeep : N.inkMid,
-      boxShadow: active ? "inset 0 0 0 0.5px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.05)" : "none",
+      boxShadow: active ? "inset 0 0 0 1px rgba(0,0,0,0.12)" : "none",
       cursor: "pointer", fontFamily: "inherit",
+      whiteSpace: "nowrap", flexShrink: 0,
       transition: "background 0.12s",
     }}>
       <I name={icon} size={11.5} stroke={1.8} />
@@ -167,10 +173,8 @@ function ComposerInner({ payload, exp, ctx }) {
   return (
     <div style={{
       flexShrink: 0,
-      borderTop: "0.5px solid " + N.hairline,
-      background: "rgba(255,255,255,0.55)",
-      backdropFilter: "blur(24px) saturate(170%)",
-      WebkitBackdropFilter: "blur(24px) saturate(170%)",
+      borderTop: "1px solid rgba(0,0,0,0.10)",
+      background: "#fafafa",
       maxHeight: "58%",
       display: "flex", flexDirection: "column",
     }}>
@@ -187,7 +191,7 @@ function ComposerInner({ payload, exp, ctx }) {
 
         <div style={{
           display: "inline-flex", gap: 2, padding: 2,
-          background: "rgba(0,0,0,0.05)", borderRadius: 8,
+          background: "rgba(0,0,0,0.05)", borderRadius: 6, flexShrink: 0,
         }}>
           <TabBtn active={mode === "write"} icon="pen" onClick={() => setMode("write")}>Write</TabBtn>
           <TabBtn active={mode === "ai"} icon="sparkle" onClick={() => setMode("ai")}>AI</TabBtn>
@@ -197,7 +201,8 @@ function ComposerInner({ payload, exp, ctx }) {
           <label style={{
             display: "inline-flex", alignItems: "center", gap: 5,
             fontSize: 11, fontWeight: 500, color: isFinal ? N.inkDeep : N.inkMid,
-            padding: "3px 9px", borderRadius: 99, cursor: "pointer",
+            padding: "3px 9px", borderRadius: 5, cursor: "pointer",
+            whiteSpace: "nowrap", flexShrink: 0,
             background: isFinal ? "rgba(177,226,69,0.28)" : "rgba(0,0,0,0.04)",
             boxShadow: isFinal ? `inset 0 0 0 1px ${A.solid}` : "none",
             transition: "background 0.12s",
@@ -268,8 +273,12 @@ function ComposerInner({ payload, exp, ctx }) {
                        disabled={!!loading || !canBuild}>Generate</Btn>
                 )}
                 {isManual && prompt && (
-                  <span style={{ fontSize: 10.5, color: N.inkSoft }}>
-                    {prompt.length} chars — paste it into any AI, then paste the answer →
+                  <span style={{
+                    fontSize: 10.5, color: N.inkSoft,
+                    flex: 1, minWidth: 0,
+                    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                  }}>
+                    {prompt.length} chars — paste into any AI, answer goes →
                   </span>
                 )}
               </div>
@@ -306,10 +315,10 @@ function ComposerInner({ payload, exp, ctx }) {
               {previewHtml && (
                 <div style={{
                   padding: "9px 12px",
-                  background: "rgba(255,255,255,0.85)",
-                  borderRadius: 8,
+                  background: "#fff",
+                  borderRadius: 5,
                   fontSize: 12, lineHeight: 1.6, color: N.ink,
-                  boxShadow: `inset 0 0 0 0.5px rgba(0,0,0,0.08), inset 3px 0 0 0 ${A.solid}`,
+                  boxShadow: `inset 0 0 0 1px rgba(0,0,0,0.12), inset 3px 0 0 0 ${A.solid}`,
                   maxHeight: 120, overflow: "auto",
                 }} dangerouslySetInnerHTML={{ __html: previewHtml }} />
               )}
@@ -319,9 +328,9 @@ function ComposerInner({ payload, exp, ctx }) {
 
         {existingText && mode === "ai" && (
           <div style={{
-            padding: "6px 10px", borderRadius: 7,
+            padding: "6px 10px", borderRadius: 5,
             background: "rgba(0,0,0,0.025)",
-            boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.06)",
+            boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.08)",
             fontSize: 11, lineHeight: 1.5, color: N.inkMid,
             maxHeight: 60, overflow: "auto", whiteSpace: "pre-wrap",
           }}>
