@@ -33,7 +33,8 @@ function SettingsModal({ tab = "account", onTab }) {
           <SettingsTab icon="trash"    label="Danger"   active={tab === "danger"}   onClick={() => onTab && onTab("danger")} />
         </div>
 
-        <div style={{ flex: 1, padding: "18px 22px", display: "flex", flexDirection: "column", gap: 18, overflow: "auto" }}>
+        <div key={tab} className="mono-fade"
+             style={{ flex: 1, padding: "18px 22px", display: "flex", flexDirection: "column", gap: 18, overflow: "auto" }}>
           {tab === "account" && <AccountPane />}
           {tab === "ai"      && <AIProviderPane />}
           {tab === "prompts" && <PromptsPane />}
@@ -820,36 +821,46 @@ function PlaceholderHubPanel() {
   });
 
 
-  // Collapsed: a plain vertical strip joined to the main panel.
-  // Click anywhere on it to expand.
-  if (!ctx.hubOpen) {
-    return (
-      <div
-        onClick={ctx.toggleHub}
-        title={`Placeholders — ${queue.length} pending. Click to expand.`}
-        style={{
-          width: 30, flexShrink: 0, cursor: "pointer",
-          background: "#f4f4f3", borderLeft: HUB_SEP,
-          display: "flex", flexDirection: "column", alignItems: "center",
-          padding: "12px 0", gap: 8,
-        }}>
-        <I name="tray" size={14} stroke={1.7} style={{ color: N.inkMid }} />
-        {queue.length > 0 && (
-          <span className="tnum" style={{
-            fontSize: 10, color: A.onAccent, background: A.solid,
-            minWidth: 16, textAlign: "center", padding: "1px 0",
-            borderRadius: 4,
-          }}>{queue.length}</span>
-        )}
-      </div>);
-  }
+  const open = !!ctx.hubOpen;
 
-  // Expanded: same strip, grown wide. Queue on top, schedules below —
-  // no headers, the structure carries the hierarchy.
+  // One container whose width animates between the 30px strip and the
+  // 300px panel — the strip literally grows into the panel.
   return (
     <div style={{
-      width: 300, flexShrink: 0,
-      background: "#fafafa", borderLeft: HUB_SEP,
+      width: open ? 300 : 30, flexShrink: 0,
+      transition: "width 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.22s",
+      background: open ? "#fafafa" : "#f4f4f3",
+      borderLeft: HUB_SEP,
+      display: "flex", flexDirection: "column", overflow: "hidden",
+    }}>
+      {open ? <HubExpanded /> : (
+        <div
+          className="mono-fade"
+          onClick={ctx.toggleHub}
+          title={`Placeholders — ${queue.length} pending. Click to expand.`}
+          style={{
+            flex: 1, cursor: "pointer", minWidth: 30,
+            display: "flex", flexDirection: "column", alignItems: "center",
+            padding: "12px 0", gap: 8,
+          }}>
+          <I name="tray" size={14} stroke={1.7} style={{ color: N.inkMid }} />
+          {queue.length > 0 && (
+            <span className="tnum" style={{
+              fontSize: 10, color: A.onAccent, background: A.solid,
+              minWidth: 16, textAlign: "center", padding: "1px 0",
+              borderRadius: 4,
+            }}>{queue.length}</span>
+          )}
+        </div>
+      )}
+    </div>);
+
+  // Expanded body: queue on top, schedules below — no headers, the
+  // structure carries the hierarchy. Inner width is fixed at 300 so the
+  // content doesn't squish while the container width animates.
+  function HubExpanded() { return (
+    <div className="mono-fade" style={{
+      width: 300, flex: 1, minHeight: 0,
       display: "flex", flexDirection: "column", overflow: "hidden",
     }}>
       {/* Slim top row: count + collapse — no title */}
@@ -929,6 +940,7 @@ function PlaceholderHubPanel() {
         )}
       </div>
     </div>);
+  }
 }
 
 function Toggle({ on, onClick }) {
