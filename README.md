@@ -43,7 +43,7 @@ open "dist/CAS Manager.app"
 All user data lives in `~/Library/Application Support/CAS Manager/` on macOS:
 
 - `cas_data.db` — local cache of your experiences + reflections
-- `mb_state.json` — session cookies (treat like a password)
+- `mb_state.json` — session cookies + your ManageBac credentials, kept locally so the app can re-login automatically when the session expires (treat like a password)
 - `cas_config.json` — your settings
 - `app.log` — runtime log (helpful for bug reports)
 

@@ -15,14 +15,15 @@
   .tnum { font-variant-numeric: tabular-nums; }
   button { font-family: inherit; }
 
-  /* Hover states — uniform, subtle, monochrome */
-  .mono-refl-card:hover { background: rgba(255,255,255,0.92) !important; box-shadow: inset 0 0 0 0.5px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.06) !important; }
+  /* Hover states — uniform, subtle, monochrome.
+     Flat layout: panels are square and joined; only controls have radii. */
+  .mono-refl-card:hover { background: rgba(0,0,0,0.02); }
   .mono-refl-edit:hover { background: rgba(0,0,0,0.08) !important; }
   .mono-user-dock:hover { background: rgba(255,255,255,0.82) !important; }
   .mono-tray:hover { background: rgba(0,0,0,0.06); color: rgba(20,20,20,0.85) !important; }
-  .mono-sb-item:not(.active):hover { background: rgba(255,255,255,0.55); }
-  .mono-queue-row:hover { background: rgba(255,255,255,0.85) !important; }
-  .mono-schedule-row:hover { background: rgba(255,255,255,0.85) !important; }
+  .mono-sb-item:not(.active):hover { background: rgba(0,0,0,0.045); }
+  .mono-queue-row:hover { background: rgba(0,0,0,0.02) !important; }
+  .mono-schedule-row:hover { background: rgba(0,0,0,0.02) !important; }
   .mono-close:hover { background: rgba(0,0,0,0.12) !important; }
   .mono-settings-tab:hover { background: rgba(0,0,0,0.04); }
   .mono-mode-card:hover { transform: translateY(-1px); }
@@ -45,6 +46,7 @@
 <script type="text/babel" src="/static/jsx/mono-shell.jsx"></script>
 <script type="text/babel" src="/static/jsx/mono-modal-shell.jsx"></script>
 <script type="text/babel" src="/static/jsx/mono-modals.jsx"></script>
+<script type="text/babel" src="/static/jsx/mono-composer.jsx"></script>
 <script type="text/babel" src="/static/jsx/mono-settings-hub.jsx"></script>
 <script type="text/babel" src="/static/jsx/mono-prototype.jsx"></script>
 </body>

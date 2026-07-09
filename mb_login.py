@@ -32,7 +32,11 @@ STATE_PATH = cas_paths.STATE_PATH
 def login_with_password(email: str, password: str, base: str = BASE) -> dict:
     """
     Authenticate with email + password via POST /sessions.json.
-    Returns state dict {"cookies": [...], "auth_token": "..."} ready to save.
+    Returns state dict {"cookies": [...], "auth_token": "...", "email": ...,
+    "password": ...} ready to save. Credentials are kept in the state file so
+    the app can re-login automatically when both the session cookie and the
+    auth_token have expired (mb_state.json is local-only and already holds a
+    year-long session cookie — treat the whole file like a password).
     Raises RuntimeError on failure.
     """
     r = requests.post(
@@ -64,7 +68,8 @@ def login_with_password(email: str, password: str, base: str = BASE) -> dict:
     if not any(c["name"] == "_managebac_session" for c in cookies):
         raise RuntimeError("Login succeeded but no session cookie was returned — please try again")
 
-    return {"cookies": cookies, "auth_token": auth_token}
+    return {"cookies": cookies, "auth_token": auth_token,
+            "email": email, "password": password}
 
 
 def refresh_with_token(auth_token: str, base: str = BASE) -> dict:

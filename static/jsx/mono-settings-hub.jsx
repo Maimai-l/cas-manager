@@ -10,6 +10,7 @@ const Btn = window.MonoBtn;
 const Pill = window.MonoPill;
 const StrandTag = window.MonoStrandTag;
 const API = window.API;
+const HUB_SEP = window.MONO_SEP || "1px solid rgba(0,0,0,0.10)";
 
 // ── Settings ───────────────────────────────────────────────────────────
 function SettingsModal({ tab = "account", onTab }) {
@@ -51,7 +52,7 @@ function SettingsTab({ icon, label, active, onClick }) {
       style={{
         display: "flex", alignItems: "center", gap: 9,
         padding: "7px 10px", borderRadius: 7,
-        fontSize: 12, fontWeight: active ? 600 : 500,
+        fontSize: 12, fontWeight: 500,
         color: active ? N.inkDeep : N.inkMid,
         background: active ? "rgba(255,255,255,0.8)" : "transparent",
         boxShadow: active ? "inset 0 0 0 0.5px rgba(0,0,0,0.08)" : "none",
@@ -71,7 +72,7 @@ function AccountPane() {
   return (
     <>
       <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: N.inkDeep, marginBottom: 2 }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep, marginBottom: 2 }}>
           ManageBac connection
         </div>
         <div style={{ fontSize: 11, color: N.inkMid, lineHeight: 1.5 }}>
@@ -112,7 +113,7 @@ function LoggedInBlock() {
         <I name="check" size={18} stroke={2.2} />
       </div>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 12.5, fontWeight: 600, color: N.inkDeep }}>
+        <div style={{ fontSize: 12.5, fontWeight: 500, color: N.inkDeep }}>
           Connected to ManageBac
         </div>
         <div style={{ fontSize: 10.5, color: N.inkSoft }}>
@@ -216,8 +217,9 @@ function LoginForm({ onCancel }) {
         </Btn>
       </div>
       <div style={{ fontSize: 10.5, color: N.inkSoft, lineHeight: 1.5, marginTop: 4 }}>
-        The password is only used for one-time login, and the session token is saved locally in mb_state.json.
-        The school URL will be automatically saved to the configuration after successful login.
+        Credentials are stored only on this computer (mb_state.json) so the app can
+        re-login automatically when the session expires — you won't need to type them again.
+        The school URL is saved to the configuration after a successful login.
       </div>
     </div>);
 }
@@ -249,7 +251,7 @@ function AIProviderPane() {
   return (
     <>
       <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: N.inkDeep, marginBottom: 2 }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep, marginBottom: 2 }}>
           AI provider
         </div>
         <div style={{ fontSize: 11, color: N.inkMid }}>
@@ -343,7 +345,7 @@ function PromptsPane() {
   return (
     <>
       <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: N.inkDeep, marginBottom: 2 }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep, marginBottom: 2 }}>
           System prompts
         </div>
         <div style={{ fontSize: 11, color: N.inkMid, lineHeight: 1.55 }}>
@@ -359,8 +361,8 @@ function PromptsPane() {
       {!loading && Object.keys(grouped).map((intent) => (
         <div key={intent} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{
-            fontSize: 10, fontWeight: 700, color: N.inkSoft,
-            letterSpacing: 0.6, textTransform: "uppercase",
+            fontSize: 10, fontWeight: 500, color: N.inkSoft,
+            
             marginTop: 4
           }}>{intent}</div>
           {grouped[intent].map((p) => (
@@ -445,13 +447,13 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
         }}>
         <I name="pen" size={13} stroke={1.7} style={{ color: N.inkMid, flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 600, color: N.inkDeep }}>{data.label}</div>
+          <div style={{ fontSize: 12.5, fontWeight: 500, color: N.inkDeep }}>{data.label}</div>
           <div style={{ fontSize: 10.5, color: N.inkSoft, marginTop: 2,
                         fontFamily: "ui-monospace, SF Mono, Menlo, monospace" }}>{data.slot}</div>
         </div>
         {data.is_customized ? (
           <span style={{
-            fontSize: 10, fontWeight: 600,
+            fontSize: 10, fontWeight: 500,
             padding: "2px 8px", borderRadius: 99,
             background: A.solid, color: A.onAccent,
           }}>Customized</span>
@@ -572,7 +574,7 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
                 padding: "6px 14px", borderRadius: 7, border: "none",
                 background: dirty ? A.solid : "rgba(255,255,255,0.85)",
                 color: dirty ? A.onAccent : N.ink,
-                fontWeight: 600, fontSize: 11.5,
+                fontWeight: 500, fontSize: 11.5,
                 cursor: (saving || !dirty) ? "default" : "pointer",
                 opacity: (saving || !dirty) ? 0.5 : 1,
                 boxShadow: dirty ? A.shadow : "inset 0 0 0 0.5px rgba(0,0,0,0.08)",
@@ -608,7 +610,7 @@ function ProviderCard({ name, sub, icon, active, onClick }) {
       }}>
         <I name={icon} size={13} stroke={1.7} />
       </div>
-      <div style={{ fontSize: 12, fontWeight: 600, color: N.inkDeep, display: "flex", alignItems: "center", gap: 5 }}>
+      <div style={{ fontSize: 12, fontWeight: 500, color: N.inkDeep, display: "flex", alignItems: "center", gap: 5 }}>
         {name}
         {active &&
           <span style={{
@@ -633,7 +635,7 @@ function GeneralPane() {
   return (
     <>
       <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: N.inkDeep, marginBottom: 2 }}>General</div>
+        <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep, marginBottom: 2 }}>General</div>
         <div style={{ fontSize: 11, color: N.inkMid }}>App-level settings stored in <code>cas_config.json</code>.</div>
       </div>
       <div>
@@ -691,7 +693,7 @@ function DangerPane() {
   return (
     <>
       <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: "#a4332e", marginBottom: 2 }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: "#a4332e", marginBottom: 2 }}>
           Danger Zone
         </div>
         <div style={{ fontSize: 11, color: N.inkMid, lineHeight: 1.55 }}>
@@ -707,7 +709,7 @@ Deletion cannot be undone — only enable this when you are <i>absolutely sure</
         display: "flex", alignItems: "center", gap: 12
       }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 600, color: "#7a1f1a" }}>
+          <div style={{ fontSize: 12.5, fontWeight: 500, color: "#7a1f1a" }}>
             Enable destructive actions
           </div>
           <div style={{ fontSize: 10.5, color: "#8b3e39", marginTop: 2 }}>
@@ -730,8 +732,8 @@ Deletion cannot be undone — only enable this when you are <i>absolutely sure</
     </>);
 }
 
-// ── Placeholder Hub ────────────────────────────────────────────────────
-function PlaceholderHubModal() {
+// ── Placeholder Hub — collapsible right side panel (not a modal) ────────
+function PlaceholderHubPanel() {
   const ctx = React.useContext(window.MonoCtx);
   const [schedules, setSchedules] = React.useState([]);
   const [queue, setQueue] = React.useState([]);
@@ -751,7 +753,9 @@ function PlaceholderHubModal() {
     }
   }, []);
 
-  React.useEffect(() => { reload(); }, [reload]);
+  // Mounted only while open — also re-pull when the global pending count
+  // changes (e.g. a placeholder got filled via the composer).
+  React.useEffect(() => { reload(); }, [reload, ctx.pendingCount]);
 
   async function toggleSchedule(s, on) {
     setError(null);
@@ -794,14 +798,16 @@ function PlaceholderHubModal() {
   }
 
   function openFill(q) {
-    // Jump to AI step 1 with the placeholder pre-filled
-    ctx.setModalPayload({
-      fillingRid:  q.rid,
-      fillingCas:  q.cas_id,
-      fillingDate: q.group_date || null,
-      notes: "",
+    // Open the flat composer (AI tab) pre-targeted at the placeholder —
+    // also switches the main panel to that experience. The panel stays
+    // open so the user can work through the queue item by item.
+    ctx.openComposer({
+      mode: "ai",
+      casId: q.cas_id,
+      rid: q.rid,
+      date: q.group_date || null,
+      isPlaceholderFill: true,
     });
-    ctx.go("ai-1");
   }
 
   // Combine schedules with all experiences so users can enable new ones
@@ -814,94 +820,114 @@ function PlaceholderHubModal() {
       : { cas_id: e.id, exp: e, on: false, everyDays: 1, interval_days: 1, last_run_date: null };
   });
 
+
+  // Collapsed: a plain vertical strip joined to the main panel.
+  // Click anywhere on it to expand.
+  if (!ctx.hubOpen) {
+    return (
+      <div
+        onClick={ctx.toggleHub}
+        title={`Placeholders — ${queue.length} pending. Click to expand.`}
+        style={{
+          width: 30, flexShrink: 0, cursor: "pointer",
+          background: "#f4f4f3", borderLeft: HUB_SEP,
+          display: "flex", flexDirection: "column", alignItems: "center",
+          padding: "12px 0", gap: 8,
+        }}>
+        <I name="tray" size={14} stroke={1.7} style={{ color: N.inkMid }} />
+        {queue.length > 0 && (
+          <span className="tnum" style={{
+            fontSize: 10, color: A.onAccent, background: A.solid,
+            minWidth: 16, textAlign: "center", padding: "1px 0",
+            borderRadius: 4,
+          }}>{queue.length}</span>
+        )}
+      </div>);
+  }
+
+  // Expanded: same strip, grown wide. Queue on top, schedules below —
+  // no headers, the structure carries the hierarchy.
   return (
-    <ModalShell title="Placeholders" width={920}
-      footer={<>
-        <span style={{ fontSize: 11, color: N.inkMid, marginRight: "auto" }}>
-          {loading ? "Loading…" :
-            `${queue.length} pending · ${fullSchedList.filter((s) => s.on).length} active schedules`}
+    <div style={{
+      width: 300, flexShrink: 0,
+      background: "#fafafa", borderLeft: HUB_SEP,
+      display: "flex", flexDirection: "column", overflow: "hidden",
+    }}>
+      {/* Slim top row: count + collapse — no title */}
+      <div
+        onClick={ctx.toggleHub}
+        title="Collapse panel"
+        style={{
+          height: 42, boxSizing: "border-box", padding: "0 12px",
+          borderBottom: HUB_SEP,
+          display: "flex", alignItems: "center", gap: 8,
+          cursor: "pointer", flexShrink: 0,
+        }}>
+        <I name="tray" size={13} stroke={1.7} style={{ color: N.inkMid }} />
+        <span style={{ flex: 1, fontSize: 11, color: N.inkMid }}>
+          {loading ? "Loading…" : `${queue.length} pending`}
         </span>
-        <Btn onClick={runAllDue} disabled={loading}>▶ Run all due</Btn>
-        <Btn onClick={ctx.close}>Done</Btn>
-      </>}
-      bodyStyle={{ padding: 0 }}>
-      <div style={{ display: "flex", height: 500, marginTop: -4 }}>
-        <div style={{
-          width: 340, padding: "16px 16px 12px",
-          background: "rgba(0,0,0,0.02)",
-          borderRight: "0.5px solid " + N.hairline,
-          display: "flex", flexDirection: "column", gap: 10, overflow: "auto"
-        }}>
-          <PaneHeader icon="repeat" title="Schedules" sub="When enabled, placeholder reflections will be automatically created at intervals." />
-          {loading && <div style={{ fontSize: 11, color: N.inkSoft }}>Loading…</div>}
-          {!loading && !fullSchedList.length && (
-            <div style={{ fontSize: 11, color: N.inkSoft }}>No active experiences.</div>
-          )}
-          {fullSchedList.map((s) =>
-            <ScheduleRow
-              key={s.cas_id}
-              exp={s.exp.name || `Exp ${s.cas_id}`}
-              strands={s.exp.strands && s.exp.strands.length
-                       ? s.exp.strands
-                       : [s.exp.strand || "activity"]}
-              everyDays={s.everyDays}
-              next={s.last_run_date ? `+${s.everyDays}d after ${s.last_run_date}` : "—"}
-              on={s.on}
-              onToggle={() => toggleSchedule(s, !s.on)}
-              onStep={(d) => stepInterval(s, d)}
-              onRunNow={() => runOne(s.cas_id)}
-            />
-          )}
-        </div>
-
-        <div style={{
-          flex: 1, padding: "16px 18px 12px",
-          display: "flex", flexDirection: "column", gap: 10, overflow: "auto"
-        }}>
-          <PaneHeader icon="inbox" title="Queue" sub="Click an item to Generate" />
-          {loading && <div style={{ fontSize: 11, color: N.inkSoft }}>Loading…</div>}
-          {!loading && !queue.length && (
-            <div style={{ fontSize: 12, color: N.inkSoft, padding: 16, textAlign: "center" }}>
-              No pending placeholders. All caught up!
-            </div>
-          )}
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {queue.map((q) => {
-              const qExp = ctx.experiences.find((e) => e.id === q.cas_id) || {};
-              const qStrands = qExp.strands && qExp.strands.length
-                ? qExp.strands
-                : [qExp.strand || "activity"];
-              return (
-              <QueueRow
-                key={q.rid}
-                date={q.group_date}
-                strands={qStrands}
-                exp={q.name || `Exp ${q.cas_id}`}
-                source="Placeholder"
-                preview={q.body_html}
-                onStart={() => openFill(q)}
-              />
-              );
-            })}
-          </div>
-        </div>
+        <I name="chevron" size={11} stroke={1.8} style={{ color: N.inkSoft }} />
       </div>
-      {error && (
-        <div style={{ padding: "8px 18px", color: "#a4332e", fontSize: 11.5,
-                      borderTop: "0.5px solid " + N.hairline, background: "rgba(216,80,74,0.06)" }}>⚠ {error}</div>
-      )}
-    </ModalShell>);
-}
 
-function PaneHeader({ icon, title, sub }) {
-  return (
-    <div style={{ display: "flex", alignItems: "flex-end", gap: 10, paddingBottom: 4 }}>
-      <div style={{ flex: 1 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <I name={icon} size={13} stroke={1.7} style={{ color: N.inkMid }} />
-          <span style={{ fontSize: 13.5, fontWeight: 700, color: N.inkDeep, letterSpacing: -0.2 }}>{title}</span>
-        </div>
-        <div style={{ fontSize: 10.5, color: N.inkSoft, marginTop: 2 }}>{sub}</div>
+      {/* Queue zone */}
+      <div style={{ flex: 1, overflow: "auto", padding: "10px 12px",
+                    display: "flex", flexDirection: "column", gap: 6 }}>
+        {!loading && !queue.length && (
+          <div style={{ fontSize: 11, color: N.inkSoft, padding: "4px 2px" }}>
+            No pending placeholders.
+          </div>
+        )}
+        {queue.map((q) => {
+          const qExp = ctx.experiences.find((e) => e.id === q.cas_id) || {};
+          const qStrands = qExp.strands && qExp.strands.length
+            ? qExp.strands
+            : [qExp.strand || "activity"];
+          return (
+            <QueueRow
+              key={q.rid}
+              date={q.group_date}
+              strands={qStrands}
+              exp={q.name || `Exp ${q.cas_id}`}
+              preview={q.body_html}
+              onStart={() => openFill(q)}
+            />
+          );
+        })}
+        <div style={{ flex: 1 }} />
+        <Btn onClick={runAllDue} disabled={loading}
+             style={{ alignSelf: "flex-end" }}>▶ Run all due</Btn>
+      </div>
+
+      {/* Schedules zone — separated by a solid divider, no header */}
+      <div style={{
+        borderTop: HUB_SEP,
+        maxHeight: "45%", overflow: "auto",
+        padding: "10px 12px",
+        display: "flex", flexDirection: "column", gap: 6,
+        background: "#f4f4f3",
+      }}>
+        {!loading && !fullSchedList.length && (
+          <div style={{ fontSize: 11, color: N.inkSoft }}>No active experiences.</div>
+        )}
+        {fullSchedList.map((s) =>
+          <ScheduleRow
+            key={s.cas_id}
+            exp={s.exp.name || `Exp ${s.cas_id}`}
+            strands={s.exp.strands && s.exp.strands.length
+                     ? s.exp.strands
+                     : [s.exp.strand || "activity"]}
+            everyDays={s.everyDays}
+            next={s.last_run_date ? `+${s.everyDays}d after ${s.last_run_date}` : "—"}
+            on={s.on}
+            onToggle={() => toggleSchedule(s, !s.on)}
+            onStep={(d) => stepInterval(s, d)}
+            onRunNow={() => runOne(s.cas_id)}
+          />
+        )}
+        {error && (
+          <div style={{ fontSize: 10.5, color: "#a4332e" }}>⚠ {error}</div>
+        )}
       </div>
     </div>);
 }
@@ -930,10 +956,10 @@ function Toggle({ on, onClick }) {
 function ScheduleRow({ exp, strands, everyDays, next, on, onToggle, onStep, onRunNow }) {
   return (
     <div className="mono-schedule-row" style={{
-      padding: "11px 12px", borderRadius: 10,
-      background: on ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.4)",
-      boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.06)",
-      opacity: on ? 1 : 0.7,
+      padding: "10px 12px", borderRadius: 5,
+      background: "#fff",
+      boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
+      opacity: on ? 1 : 0.65,
       display: "flex", flexDirection: "column", gap: 8,
       flexShrink: 0,
       transition: "background 0.15s"
@@ -941,7 +967,7 @@ function ScheduleRow({ exp, strands, everyDays, next, on, onToggle, onStep, onRu
       <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
         <StrandTag strands={strands} compact />
         <span style={{
-          fontSize: 12, fontWeight: 600, color: N.inkDeep,
+          fontSize: 12, fontWeight: 500, color: N.inkDeep,
           flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"
         }}>{exp}</span>
         <Toggle on={on} onClick={onToggle} />
@@ -957,7 +983,7 @@ function ScheduleRow({ exp, strands, everyDays, next, on, onToggle, onStep, onRu
           <button onClick={() => onStep && onStep(-1)} style={stepperBtn}>−</button>
           <span className="tnum" style={{
             padding: "2px 9px", display: "inline-flex", alignItems: "center",
-            fontWeight: 600, color: N.inkDeep, minWidth: 18, justifyContent: "center"
+            fontWeight: 500, color: N.inkDeep, minWidth: 18, justifyContent: "center"
           }}>{everyDays}</span>
           <button onClick={() => onStep && onStep(1)} style={stepperBtn}>+</button>
         </div>
@@ -986,7 +1012,7 @@ const stepperBtn = {
   fontWeight: 500, fontFamily: "inherit"
 };
 
-function QueueRow({ date, strands, exp, source, preview, onStart }) {
+function QueueRow({ date, strands, exp, preview, onStart }) {
   const previewText = React.useMemo(() => {
     const d = document.createElement("div");
     d.innerHTML = preview || "";
@@ -999,40 +1025,39 @@ function QueueRow({ date, strands, exp, source, preview, onStart }) {
       onClick={onStart}
       style={{
         display: "flex", alignItems: "center", gap: 10,
-        padding: "9px 12px", borderRadius: 9,
-        background: "rgba(255,255,255,0.65)",
-        boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.06)",
+        padding: "9px 12px", borderRadius: 5,
+        background: "#fff",
+        boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
         flexShrink: 0,
         cursor: "pointer", transition: "background 0.15s"
       }}>
       <StrandTag strands={strands} compact />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
-          fontSize: 12, fontWeight: 600, color: N.inkDeep,
+          fontSize: 12, fontWeight: 500, color: N.inkDeep,
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"
         }}>{exp}</div>
-        <div style={{ fontSize: 10, color: N.inkSoft, display: "flex", gap: 6, marginTop: 1 }}>
-          <span className="tnum">{date}</span>
-          <span>·</span>
-          <span>{source}</span>
+        <div className="tnum" style={{ fontSize: 10, color: N.inkSoft, marginTop: 1 }}>
+          {date}
         </div>
         {previewText && (
-          <div style={{ fontSize: 10.5, color: N.inkMid, marginTop: 3, fontStyle: "italic",
+          <div style={{ fontSize: 10.5, color: N.inkMid, marginTop: 3,
                         overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{previewText}</div>
         )}
       </div>
       <button
         onClick={(e) => { e.stopPropagation(); onStart && onStart(); }}
         style={{
-          fontSize: 10.5, padding: "3px 10px", borderRadius: 6,
+          fontSize: 10.5, padding: "3px 10px", borderRadius: 4,
           background: A.solid, color: A.onAccent,
-          border: "none", cursor: "pointer", fontWeight: 600,
+          border: "none", cursor: "pointer", fontWeight: 500,
+          whiteSpace: "nowrap", flexShrink: 0,
           fontFamily: "inherit"
         }}>
-        Start here
+        Fill
       </button>
     </div>);
 }
 
 window.SettingsModal_Mono = SettingsModal;
-window.PlaceholderHubModal_Mono = PlaceholderHubModal;
+window.MonoPlaceholderPanel = PlaceholderHubPanel;

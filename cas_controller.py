@@ -23,6 +23,7 @@ from typing import Callable, Optional
 import cas_api
 import cas_db
 import cas_paths
+from cas_errors import NetworkError
 from cas_errors import SessionExpiredError as _SessionExpiredError
 
 # ── Re-export config helpers (avoids importing cas.py directly) ───────────────
@@ -68,10 +69,54 @@ class SessionError(_SessionExpiredError):
     """Raised when session is missing or expired."""
 
 
+# Cache the last successfully-verified session so we don't hit /student on
+# every single API call. Re-verified after _SESSION_TTL seconds or whenever
+# ctrl_invalidate_session() is called (e.g. a request hit a login redirect).
+_session_cache: dict = {"s": None, "base": None, "ts": 0.0}
+_SESSION_TTL = 600  # seconds
+
+
+def ctrl_invalidate_session() -> None:
+    """Drop the cached session so the next ctrl_session() re-verifies."""
+    _session_cache.update(s=None, base=None, ts=0.0)
+
+
+def _logged_in_with_retry(s, base: str, attempts: int = 3) -> bool:
+    """check_login with retry/backoff on transient network errors.
+    Returns True/False only for a definitive answer; raises NetworkError
+    when ManageBac stays unreachable — being offline is NOT being logged out."""
+    import time
+    last: Optional[Exception] = None
+    for i in range(attempts):
+        try:
+            return cas_api.check_login_strict(s, base)
+        except NetworkError as e:
+            last = e
+            if i < attempts - 1:
+                time.sleep(min(2 ** i, 4))
+    raise NetworkError(str(last))
+
+
 def ctrl_session():
-    """Return (requests.Session, base_url).  Raises SessionError if not logged in."""
+    """Return (requests.Session, base_url).
+
+    Recovery chain before giving up:
+      1. stored cookies          (mb_state.json)
+      2. silent auth_token refresh
+      3. full re-login with saved email/password
+    Raises SessionError only when all three fail with a definitive "logged
+    out" answer; raises NetworkError when ManageBac is unreachable."""
+    import time
     cfg = ctrl_config()
     base = cfg["base"]
+    if not base:
+        raise SessionError("No school URL configured. Open Settings → Account.")
+
+    now = time.time()
+    if (_session_cache["s"] is not None and _session_cache["base"] == base
+            and now - _session_cache["ts"] < _SESSION_TTL):
+        return _session_cache["s"], base
+
     # Always use the canonical state path from cas_paths — never trust
     # cfg["state"] for this, since it was historically a relative path
     # ("mb_state.json") and would resolve against CWD, which in frozen mode
@@ -81,35 +126,75 @@ def ctrl_session():
     if not state_path.exists():
         raise SessionError("No session file found. Run: cas login")
     state = cas_api.load_state(state_path)
+
+    # 1. Stored cookies
     s = cas_api.build_session(state, base)
-    if not cas_api.check_login(s, base):
-        # Session expired — try silent refresh using stored auth_token
+    if _logged_in_with_retry(s, base):
+        _session_cache.update(s=s, base=base, ts=now)
+        return s, base
+
+    # 2. Silent refresh via stored auth_token
+    try:
+        state = cas_api.refresh_session(state_path, base)
+        s = cas_api.build_session(state, base)
+        if _logged_in_with_retry(s, base):
+            _session_cache.update(s=s, base=base, ts=now)
+            return s, base
+    except NetworkError:
+        raise
+    except Exception:
+        pass  # token expired/invalid — fall through to credential re-login
+
+    # 3. Full re-login with saved credentials
+    email, password = state.get("email"), state.get("password")
+    if email and password:
+        import requests as _requests
+
+        import mb_login
         try:
-            state = cas_api.refresh_session(state_path, base)
-            s = cas_api.build_session(state, base)
-            if not cas_api.check_login(s, base):
-                raise SessionError("Session expired. Run: cas login")
-        except (RuntimeError, Exception):
-            raise SessionError("Session expired. Run: cas login")
-    return s, base
+            new_state = mb_login.login_with_password(email, password, base)
+            mb_login.save_state(new_state)
+            s = cas_api.build_session(new_state, base)
+            if _logged_in_with_retry(s, base):
+                _session_cache.update(s=s, base=base, ts=now)
+                return s, base
+        except _requests.RequestException as e:
+            raise NetworkError(f"ManageBac unreachable: {e}") from e
+        except RuntimeError:
+            pass  # wrong/changed password — genuine re-login needed
+
+    raise SessionError("Session expired. Run: cas login")
 
 
 def ctrl_check_login() -> bool:
-    """Return True if session is valid, False otherwise."""
+    """Return True if session is valid, False otherwise. When ManageBac is
+    unreachable we optimistically report the stored state — offline must not
+    bounce the user back to the password form."""
     try:
         ctrl_session()
         return True
     except SessionError:
         return False
+    except NetworkError:
+        return cas_paths.STATE_PATH.exists()
 
 
 # ── Experiences ───────────────────────────────────────────────────────────────
 
 def ctrl_list_experiences() -> list[dict]:
-    """Return all experiences cached in local DB."""
+    """Return all experiences cached in local DB, with reflection_count."""
     cas_db.init_db()
     with cas_db.open_db() as conn:
-        return cas_db.list_experiences(conn)
+        exps = cas_db.list_experiences(conn)
+        counts = {
+            row[0]: row[1]
+            for row in conn.execute(
+                "SELECT cas_id, COUNT(*) FROM reflections GROUP BY cas_id"
+            ).fetchall()
+        }
+    for e in exps:
+        e["reflection_count"] = counts.get(e["id"], 0)
+    return exps
 
 
 def ctrl_get_experience(cas_id: int) -> Optional[dict]:
@@ -290,14 +375,25 @@ def ctrl_create_album(
     date_str: Optional[str] = None,
 ) -> int:
     """Upload photos as an album reflection.  Returns new reflection ID."""
+    photos = [(Path(p).name, Path(p).read_bytes(), label) for p in image_paths]
+    return ctrl_create_album_bytes(cas_id, photos, lo_ids=lo_ids,
+                                   date_str=date_str)
+
+
+def ctrl_create_album_bytes(
+    cas_id: int,
+    photos: list[tuple[str, bytes, str]],   # (filename, data, caption)
+    lo_ids: Optional[list[int]] = None,
+    date_str: Optional[str] = None,
+) -> int:
+    """Upload in-memory photos (e.g. multipart uploads) as an album
+    reflection.  Returns new reflection ID."""
     s, base = ctrl_session()
     csrf = cas_api.get_csrf(s, f"{base}/student/ib/activity/cas")
     if lo_ids is None:
         lo_ids = ctrl_lo_ids_for(cas_id)
-    photos = [(Path(p).name, Path(p).read_bytes(), label) for p in image_paths]
-    rid = cas_api.create_album(s, base, cas_id, csrf, lo_ids, photos,
-                               date=date_str)
-    return rid
+    return cas_api.create_album(s, base, cas_id, csrf, lo_ids, photos,
+                                date=date_str)
 
 
 def ctrl_get_album_photos(cas_id: int, rid: int) -> list[dict]:
@@ -332,6 +428,31 @@ def ctrl_add_photos_to_album(
                                      Path(path), caption=caption)
 
 
+def ctrl_add_photo_bytes_to_album(
+    cas_id: int,
+    rid: int,
+    photos: list[tuple[str, bytes]],   # (filename, data)
+    caption: str = "",
+) -> None:
+    """Add in-memory photos (e.g. multipart uploads) to an existing album."""
+    from tempfile import NamedTemporaryFile
+    s, base = ctrl_session()
+    csrf = cas_api.get_csrf(s, f"{base}/student/ib/activity/cas")
+    for filename, data in photos:
+        suffix = Path(filename or "photo.jpg").suffix or ".jpg"
+        with NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+            tmp.write(data)
+            tmp_path = Path(tmp.name)
+        try:
+            cas_api.edit_album_add_photo(s, base, cas_id, rid, csrf,
+                                         tmp_path, caption=caption)
+        finally:
+            try:
+                tmp_path.unlink()
+            except OSError:
+                pass
+
+
 def ctrl_edit_journal(
     cas_id: int,
     rid: int,
@@ -347,10 +468,13 @@ def ctrl_edit_journal(
 
 
 def ctrl_delete_reflection(cas_id: int, rid: int) -> None:
-    """Delete a reflection from ManageBac."""
+    """Delete a reflection from ManageBac and drop the local DB row."""
     s, base = ctrl_session()
     csrf = cas_api.get_csrf(s, f"{base}/student/ib/activity/cas")
     cas_api.delete_reflection(s, base, cas_id, rid, csrf)
+    cas_db.init_db()
+    with cas_db.open_db() as conn:
+        cas_db.delete_reflection_local(conn, rid)
 
 
 # ── AI generation ─────────────────────────────────────────────────────────────
@@ -413,16 +537,15 @@ def ctrl_build_prompt(cas_id: int, notes: str, kind: str = "reflection",
     When `include_history=True` (typically for final reflections), every
     non-placeholder past reflection is loaded from the local DB and inserted
     as session-by-session context."""
-    import importlib
-    _cas = importlib.import_module("cas")
+    import cas_ai
     proposal = ctrl_load_proposal(cas_id)
     history = _load_history_for(cas_id) if include_history else None
     if kind == "final":
-        system = _cas._final_system_with_context(proposal)
+        system = cas_ai.final_system_with_context(proposal)
     else:
-        system = _cas._ai_system_with_context(proposal)
-    _, user = _cas._build_prompt(notes, system, kind,
-                                 date=date, existing=existing, history=history)
+        system = cas_ai.ai_system_with_context(proposal)
+    _, user = cas_ai.build_prompt(notes, system, kind,
+                                  date=date, existing=existing, history=history)
     return f"=== SYSTEM PROMPT ===\n{system}\n\n=== YOUR MESSAGE ===\n{user}"
 
 
@@ -435,23 +558,20 @@ def ctrl_generate_ai(
     include_history: bool = False,
 ) -> str:
     """Generate AI text. kind = 'reflection' | 'final' | 'edit'.
-    Uses provider from config (anthropic / ollama / prompt).
+    Uses provider from config (anthropic / ollama). The 'prompt' provider is
+    copy-paste-only and raises — callers should use ctrl_build_prompt instead.
     When `include_history=True`, past reflections are pulled from local DB
     and passed to the AI as additional context."""
-    import importlib
-    _cas = importlib.import_module("cas")
+    import cas_ai
 
     cfg = ctrl_config()
     model = cfg.get("ai_model", "claude-opus-4-6")
     proposal = ctrl_load_proposal(cas_id)
     history = _load_history_for(cas_id) if include_history else None
 
-    if kind == "final":
-        return _cas.ai_generate_final(notes, model, proposal=proposal, cfg=cfg,
-                                      history=history)
-    return _cas.ai_generate(notes, model, proposal=proposal, cfg=cfg,
-                            kind=kind, date=date, existing=existing,
-                            history=history)
+    return cas_ai.ai_generate(notes, model, proposal=proposal, cfg=cfg,
+                              kind=kind, date=date, existing=existing,
+                              history=history)
 
 
 # ── Drafts ────────────────────────────────────────────────────────────────────
@@ -527,7 +647,72 @@ def ctrl_delete_schedule(cas_id: int) -> None:
         cas_db.delete_schedule(conn, cas_id)
 
 
+# ── Self-Assessment (SA) answers ──────────────────────────────────────────────
+
+def ctrl_get_sa_questions(cas_id: int) -> list[dict]:
+    """Fetch the experience's Self-Assessment questions + current answers
+    live from ManageBac. Returns [{name, question, answer}]."""
+    s, base = ctrl_session()
+    form = cas_api.fetch_sa_form(s, base, cas_id)
+    return form["questions"]
+
+
+def ctrl_save_sa_answer(cas_id: int, name: str, text: str) -> None:
+    """Save one SA answer (the rest of the page's answers are re-submitted
+    unchanged — ManageBac saves the whole form at once)."""
+    s, base = ctrl_session()
+    csrf = cas_api.get_csrf(s, f"{base}/student/ib/activity/cas/{cas_id}/answers")
+    cas_api.save_sa_answers(s, base, cas_id, csrf, {name: text})
+
+
+def ctrl_build_sa_prompt(cas_id: int, question: str, notes: str = "",
+                         existing: Optional[str] = None) -> str:
+    """Copy-paste prompt for answering one SA question. Proposal + LOs and
+    the full session history are always attached as evidence."""
+    import cas_ai
+    proposal = ctrl_load_proposal(cas_id)
+    history = _load_history_for(cas_id)
+    system = cas_ai.sa_system_with_context(proposal)
+    _, user = cas_ai.build_prompt(notes, system, "sa_question",
+                                  existing=existing, history=history,
+                                  question=question)
+    return f"=== SYSTEM PROMPT ===\n{system}\n\n=== YOUR MESSAGE ===\n{user}"
+
+
+def ctrl_generate_sa(cas_id: int, question: str, notes: str = "",
+                     existing: Optional[str] = None) -> str:
+    """Direct AI answer for one SA question (anthropic / ollama providers)."""
+    import cas_ai
+    cfg = ctrl_config()
+    proposal = ctrl_load_proposal(cas_id)
+    history = _load_history_for(cas_id)
+    return cas_ai.ai_generate(notes, cfg.get("ai_model", "claude-opus-4-6"),
+                              proposal=proposal, cfg=cfg, kind="sa_question",
+                              existing=existing, history=history,
+                              question=question)
+
+
 # ── Placeholders ──────────────────────────────────────────────────────────────
+
+def ctrl_list_placeholder_queue() -> list[dict]:
+    """All pending placeholder journal reflections across all experiences."""
+    cas_db.init_db()
+    items = []
+    with cas_db.open_db() as conn:
+        for exp in cas_db.list_experiences(conn):
+            cas_id = exp["id"]
+            for ph in cas_db.list_reflections(conn, cas_id,
+                                              kind="journal", placeholder=True):
+                items.append({
+                    "rid":        ph["id"],
+                    "cas_id":     cas_id,
+                    "name":       exp.get("name", ""),
+                    "group_date": ph.get("group_date", ""),
+                    "body_html":  ph.get("body_html", ""),
+                })
+    return items
+
+
 
 def ctrl_create_placeholder_for(cas_id: int,
                                  date_str: Optional[str] = None) -> tuple[int, Optional[int]]:
