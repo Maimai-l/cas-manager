@@ -78,7 +78,7 @@ function TabBtn({ active, icon, children, onClick }) {
     <button onClick={onClick} style={{
       display: "inline-flex", alignItems: "center", gap: 5,
       padding: "4px 11px", borderRadius: 6, border: "none",
-      fontSize: 11.5, fontWeight: active ? 600 : 500,
+      fontSize: 11.5, fontWeight: 500,
       background: active ? "rgba(255,255,255,0.95)" : "transparent",
       color: active ? N.inkDeep : N.inkMid,
       boxShadow: active ? "inset 0 0 0 0.5px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.05)" : "none",
@@ -181,7 +181,7 @@ function ComposerInner({ payload, exp, ctx }) {
       }}>
         <I name={existingText ? "edit" : "pen"} size={13} stroke={1.8} style={{ color: N.inkMid }} />
         <span style={{
-          fontSize: 12, fontWeight: 600, color: N.inkDeep,
+          fontSize: 12, fontWeight: 500, color: N.inkDeep,
           whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
         }}>{title}</span>
 

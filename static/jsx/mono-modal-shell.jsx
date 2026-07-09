@@ -46,7 +46,7 @@ function ModalShell({ title, children, footer, width = 560, bodyStyle, onClose }
         }}>
           <div style={{
             flex: 1, textAlign: "center",
-            fontSize: 12.5, fontWeight: 600,
+            fontSize: 12.5, fontWeight: 500,
             color: N.ink, letterSpacing: -0.1,
           }}>{title}</div>
         </div>
