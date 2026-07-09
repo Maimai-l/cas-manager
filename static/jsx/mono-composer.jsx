@@ -214,7 +214,7 @@ function ComposerInner({ payload, exp, ctx }) {
   const previewHtml = !isSA && mode === "ai" && result.trim() ? wrapPlainAsHtml(result) : "";
 
   return (
-    <div style={{
+    <div className="mono-rise" style={{
       flexShrink: 0,
       borderTop: "1px solid rgba(0,0,0,0.10)",
       background: "#fafafa",
@@ -257,8 +257,10 @@ function ComposerInner({ payload, exp, ctx }) {
         </button>
       </div>
 
-      {/* Body */}
-      <div style={{ padding: "0 14px", overflow: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
+      {/* Body — keyed so tab/type switches fade in (state lives above, so
+          nothing is lost on the DOM swap) */}
+      <div key={`${mode}-${kind}`} className="mono-fade"
+           style={{ padding: "0 14px", overflow: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
         {/* SA — pick which question is being answered */}
         {isSA && saQs && saQs.length > 0 && (
           <select
@@ -285,7 +287,7 @@ function ComposerInner({ payload, exp, ctx }) {
         )}
 
         {mode === "write" ? (
-          <div style={boxStyle}>
+          <div className="mono-box" style={boxStyle}>
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -302,7 +304,7 @@ function ComposerInner({ payload, exp, ctx }) {
                 {editExisting ? "Changes / instructions" :
                  isFinal      ? "Themes to emphasize" : "Your notes"}
               </FieldLabel>
-              <div style={{ ...boxStyle, flex: 1 }}>
+              <div className="mono-box" style={{ ...boxStyle, flex: 1 }}>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
@@ -332,7 +334,7 @@ function ComposerInner({ payload, exp, ctx }) {
               <FieldLabel>
                 {isManual ? "Paste AI's response" : "Result"}
               </FieldLabel>
-              <div style={{ ...boxStyle, flex: 1 }}>
+              <div className="mono-box" style={{ ...boxStyle, flex: 1 }}>
                 <textarea
                   value={result}
                   onChange={(e) => setResult(e.target.value)}

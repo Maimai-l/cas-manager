@@ -12,13 +12,14 @@ function ModalShell({ title, children, footer, width = 560, bodyStyle, onClose }
   const handleClose = onClose || ctx.close;
   return (
     <div
+      className="mono-fade"
       onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
       style={{
         position: "absolute", inset: 0, zIndex: 50,
         display: "flex", alignItems: "center", justifyContent: "center",
         background: "rgba(20,20,20,0.25)",
       }}>
-      <div style={{
+      <div className="mono-pop" style={{
         width, maxHeight: 720,
         borderRadius: 8,
         background: "#fff",
@@ -86,7 +87,7 @@ function FieldLabel({ children, hint }) {
 
 function FieldShell({ children, height, mono, focused, style }) {
   return (
-    <div style={{
+    <div className="mono-field" style={{
       background: "#fff",
       borderRadius: 5,
       padding: "8px 11px",

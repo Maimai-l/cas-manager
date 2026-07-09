@@ -452,8 +452,10 @@ function MainPanel({
         </div>
       </div>
 
-      {/* Reflection rows — flat, joined with hairlines (no floating cards) */}
-      <div style={{ flex: 1, overflow: "auto" }}>
+      {/* Reflection rows — flat, joined with hairlines (no floating cards).
+          Keyed by experience so switching fades the new list in (and resets
+          scroll to the top). */}
+      <div key={activeExp.id} className="mono-fade" style={{ flex: 1, overflow: "auto" }}>
         {reflLoading ? (
           <div style={{ color: N.inkSoft, fontSize: 11, padding: "12px 22px" }}>Loading reflections…</div>
         ) : null}
