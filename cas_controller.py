@@ -695,11 +695,15 @@ def ctrl_generate_sa(cas_id: int, question: str, notes: str = "",
 # ── Placeholders ──────────────────────────────────────────────────────────────
 
 def ctrl_list_placeholder_queue() -> list[dict]:
-    """All pending placeholder journal reflections across all experiences."""
+    """All pending placeholder journal reflections across active experiences.
+    Completed experiences are locked on ManageBac (their reflections can't be
+    edited anymore) and deleted ones are gone — skip both."""
     cas_db.init_db()
     items = []
     with cas_db.open_db() as conn:
         for exp in cas_db.list_experiences(conn):
+            if exp.get("is_completed") or exp.get("is_deleted"):
+                continue
             cas_id = exp["id"]
             for ph in cas_db.list_reflections(conn, cas_id,
                                               kind="journal", placeholder=True):
@@ -719,6 +723,15 @@ def ctrl_create_placeholder_for(cas_id: int,
     """Create a stealth placeholder for one experience by cloning an existing journal.
     Returns (journal_rid, None).  Falls back to old explicit tag pair if no template."""
     import time as _t
+
+    # Completed experiences are locked on ManageBac — refuse instead of
+    # posting a placeholder the user can never fill.
+    exp = ctrl_get_experience(cas_id)
+    if exp and exp.get("is_completed"):
+        raise RuntimeError(
+            f"Experience {exp.get('name') or cas_id} is completed — "
+            "placeholders can't be created on locked experiences.")
+
     s, base = ctrl_session()
     csrf   = cas_api.get_csrf(s, f"{base}/student/ib/activity/cas")
     lo_ids = ctrl_lo_ids_for(cas_id)
