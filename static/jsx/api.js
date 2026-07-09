@@ -116,6 +116,14 @@
         include_history: !!include_history,
       }),
 
+    // ── Self-Assessment answers ─────────────────────────────────────────
+    saQuestions: (cas_id) => get(`/api/experiences/${cas_id}/sa`),
+    saveSA:      (cas_id, name, text) => post(`/api/experiences/${cas_id}/sa`, { name, text }),
+    saPrompt:    (cas_id, question, notes, existing) =>
+      post("/api/ai/sa_prompt",   { cas_id, question, notes, existing }),
+    saGenerate:  (cas_id, question, notes, existing) =>
+      post("/api/ai/sa_generate", { cas_id, question, notes, existing }),
+
     // ── Prompts (system-prompt slot management) ────────────────────────
     prompts:        ()           => get("/api/prompts"),
     prompt:         (slot)       => get(`/api/prompts/${encodeURIComponent(slot)}`),

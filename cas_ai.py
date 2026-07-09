@@ -43,6 +43,22 @@ def ai_system_with_context(proposal: Optional[dict]) -> str:
     )
 
 
+def sa_system_with_context(proposal: Optional[dict]) -> str:
+    base = cas_prompts.get("sa_question.system")
+    if not proposal or not proposal.get("proposal_text"):
+        return base
+    lo_text = ""
+    if proposal.get("lo_names"):
+        lo_text = "\n".join(f"  - {lo}" for lo in proposal["lo_names"])
+        lo_text = f"\n\nSELECTED LEARNING OUTCOMES:\n{lo_text}"
+    return (
+        base
+        + f"\n\n{'='*60}"
+        + f"\nEXPERIENCE PROPOSAL (context):\n{proposal['proposal_text'][:2000]}"
+        + lo_text
+    )
+
+
 def final_system_with_context(proposal: Optional[dict]) -> str:
     base = cas_prompts.get("final.system")
     if not proposal or not proposal.get("proposal_text"):
@@ -92,15 +108,33 @@ def format_history_block(history: Optional[list]) -> str:
 def build_prompt(notes: str, system: str, kind: str = "reflection",
                  date: Optional[str] = None,
                  existing: Optional[str] = None,
-                 history: Optional[list] = None) -> tuple[str, str]:
+                 history: Optional[list] = None,
+                 question: Optional[str] = None) -> tuple[str, str]:
     """Return (system_prompt, user_message) for any provider.
-    kind = 'reflection' | 'final' | 'edit'.
+    kind = 'reflection' | 'final' | 'edit' | 'sa_question'.
     For 'edit', `existing` is the current reflection text and `notes` are the
     user's modification instructions.
     For 'final', `history` (if provided) is included as session-by-session
-    context so the summary can be grounded in real evidence."""
+    context so the summary can be grounded in real evidence.
+    For 'sa_question', `question` is the ManageBac Self-Assessment question
+    text, `existing` the current answer (if any), and `history` is included
+    as evidence."""
     history_block = format_history_block(history)
-    if kind == "final":
+    if kind == "sa_question":
+        existing_block = (
+            "\nMY CURRENT ANSWER (revise it according to my notes; keep what works):\n"
+            f"{existing}\n"
+        ) if (existing or "").strip() else ""
+        notes_block = f"\nMy notes on what to say:\n{notes}\n" if (notes or "").strip() else ""
+        user = (
+            "THE SELF-ASSESSMENT QUESTION TO ANSWER:\n"
+            f"{question or ''}\n"
+            f"{existing_block}"
+            f"{notes_block}"
+            f"{history_block}\n\n"
+            "Write the answer to this question:"
+        )
+    elif kind == "final":
         user = (
             f"Notes / themes I'd like the final reflection to emphasize:\n{notes}\n"
             f"{history_block}\n\n"
@@ -170,16 +204,20 @@ def ai_generate(notes: str, model: str,
                 kind: str = "reflection",
                 date: Optional[str] = None,
                 existing: Optional[str] = None,
-                history: Optional[list] = None) -> str:
+                history: Optional[list] = None,
+                question: Optional[str] = None) -> str:
     cfg = cfg or {}
     provider = cfg.get("ai_provider", "anthropic")
     # "edit" reuses the regular reflection system prompt (LO context etc.)
     if kind == "final":
         system = final_system_with_context(proposal)
+    elif kind == "sa_question":
+        system = sa_system_with_context(proposal)
     else:
         system = ai_system_with_context(proposal)
     _, user = build_prompt(notes, system, kind, date=date,
-                           existing=existing, history=history)
+                           existing=existing, history=history,
+                           question=question)
 
     if provider == "ollama":
         return _ai_via_ollama(system, user,

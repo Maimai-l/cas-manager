@@ -877,6 +877,99 @@ def cleanup_placeholders(s: requests.Session, base: str, cas_id: int,
 
 # ── Backup ───────────────────────────────────────────────────────────────────
 
+# ── Self-Assessment (SA) answers ─────────────────────────────────────────────
+# ManageBac renders all SA questions for an experience as ONE form on
+# /student/ib/activity/cas/<id>/answers, posted whole to .../update_answers.
+# We round-trip every form field and only swap the answer textareas we edit,
+# so the code stays agnostic to ManageBac's exact field naming.
+
+def _sa_question_label(el, soup) -> str:
+    """Best-effort question text for an answer textarea: its <label for=…>,
+    else the nearest preceding label/heading text."""
+    tid = el.get("id")
+    if tid:
+        lab = soup.find("label", attrs={"for": tid})
+        if lab:
+            t = lab.get_text(" ", strip=True)
+            if t:
+                return t
+    for prev in el.find_all_previous(["label", "h1", "h2", "h3", "h4", "h5",
+                                      "strong", "legend", "p"], limit=8):
+        t = prev.get_text(" ", strip=True)
+        if t and len(t) > 3:
+            return t
+    return el.get("name") or "Question"
+
+
+def fetch_sa_form(s: requests.Session, base: str, cas_id: int) -> dict:
+    """Fetch the Answers page and parse its update_answers form.
+    Returns {url, action, fields: [(name, value)], questions: [{name,
+    question, answer}]} — `fields` are the non-answer inputs to round-trip."""
+    url = f"{base}/student/ib/activity/cas/{cas_id}/answers"
+    r = s.get(url, timeout=30, allow_redirects=True)
+    if r.url.endswith("/login"):
+        raise SessionExpiredError("Session expired. Run: cas login")
+    r.raise_for_status()
+    soup = BeautifulSoup(r.text, "html.parser")
+
+    form = None
+    for f in soup.find_all("form"):
+        if "update_answers" in (f.get("action") or ""):
+            form = f
+            break
+    if form is None:
+        raise ScraperError(
+            f"cas_id={cas_id}: update_answers form not found on {url} — "
+            "ManageBac DOM may have changed (see /api/debug/sa)")
+
+    fields: list[tuple[str, str]] = []
+    questions: list[dict] = []
+    for el in form.find_all(["input", "textarea", "select"]):
+        name = el.get("name")
+        if not name:
+            continue
+        if el.name == "textarea":
+            questions.append({
+                "name":     name,
+                "question": _sa_question_label(el, soup),
+                "answer":   el.get_text() or "",
+            })
+        elif el.name == "input":
+            itype = (el.get("type") or "text").lower()
+            if itype in ("checkbox", "radio"):
+                if el.has_attr("checked"):
+                    fields.append((name, el.get("value", "on")))
+            elif itype in ("submit", "button", "image", "file"):
+                continue
+            else:  # text / hidden / etc.
+                fields.append((name, el.get("value", "")))
+        else:  # select
+            opt = el.find("option", selected=True) or el.find("option")
+            fields.append((name, (opt.get("value") or "") if opt else ""))
+
+    action = form.get("action") or f"/student/ib/activity/cas/{cas_id}/answers/update_answers"
+    if action.startswith("/"):
+        action = base + action
+    return {"url": url, "action": action, "fields": fields, "questions": questions}
+
+
+def save_sa_answers(s: requests.Session, base: str, cas_id: int, csrf: str,
+                    answers: dict) -> None:
+    """Save SA answers. `answers` maps field name → new text; every other
+    answer keeps its current value (whole-page form, per ManageBac)."""
+    form = fetch_sa_form(s, base, cas_id)
+    data = list(form["fields"])
+    for q in form["questions"]:
+        data.append((q["name"], answers.get(q["name"], q["answer"])))
+    r = s.post(
+        form["action"],
+        data=data,
+        headers=_xhr_headers(base, csrf, form["url"]),
+        timeout=30,
+    )
+    _check(r, f"save SA answers for cas_id={cas_id}")
+
+
 def backup_all(s: requests.Session, base: str, cas_id: int,
                out_dir: Path, sleep_s: float = 0.15) -> Path:
     cas_dir = out_dir / f"cas_{cas_id}"

@@ -464,6 +464,74 @@ def api_delete_reflection(rid: int):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# ── API: Self-Assessment answers ──────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/experiences/<int:cas_id>/sa")
+def api_sa_questions(cas_id: int):
+    """The experience's SA questions + current answers (live from ManageBac)."""
+    return _ok(ctrl.ctrl_get_sa_questions(cas_id))
+
+
+@app.route("/api/experiences/<int:cas_id>/sa", methods=["POST"])
+def api_sa_save(cas_id: int):
+    data = request.get_json(force=True) or {}
+    name = data.get("name") or ""
+    text = data.get("text") or ""
+    if not name:
+        return _err("name required")
+    ctrl.ctrl_save_sa_answer(cas_id, name, text)
+    return _ok()
+
+
+@app.route("/api/ai/sa_prompt", methods=["POST"])
+def api_ai_sa_prompt():
+    """Copy-paste prompt for one SA question (proposal + history attached)."""
+    data = request.get_json(force=True) or {}
+    cas_id   = data.get("cas_id")
+    question = (data.get("question") or "").strip()
+    if not cas_id or not question:
+        return _err("cas_id and question required")
+    prompt = ctrl.ctrl_build_sa_prompt(int(cas_id), question,
+                                       notes=data.get("notes", "") or "",
+                                       existing=data.get("existing") or None)
+    return _ok({"prompt": prompt})
+
+
+@app.route("/api/ai/sa_generate", methods=["POST"])
+def api_ai_sa_generate():
+    data = request.get_json(force=True) or {}
+    cas_id   = data.get("cas_id")
+    question = (data.get("question") or "").strip()
+    if not cas_id or not question:
+        return _err("cas_id and question required")
+    try:
+        ans = ctrl.ctrl_generate_sa(int(cas_id), question,
+                                    notes=data.get("notes", "") or "",
+                                    existing=data.get("existing") or None)
+        return _ok({"result": ans})
+    except Exception as e:
+        return _err(str(e))
+
+
+@app.route("/api/debug/sa/<int:cas_id>")
+def api_debug_sa(cas_id: int):
+    """Dump the parsed update_answers form — for diagnosing DOM changes."""
+    s, base = ctrl.ctrl_session()
+    form = cas_api.fetch_sa_form(s, base, cas_id)
+    return _ok({
+        "url":    form["url"],
+        "action": form["action"],
+        "fields": form["fields"],
+        "questions": [
+            {"name": q["name"], "question": q["question"],
+             "answer_preview": (q["answer"] or "")[:120]}
+            for q in form["questions"]
+        ],
+    })
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # ── API: AI ───────────────────────────────────────────────────────────────────
 # ══════════════════════════════════════════════════════════════════════════════
 

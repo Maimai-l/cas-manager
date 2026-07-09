@@ -647,6 +647,51 @@ def ctrl_delete_schedule(cas_id: int) -> None:
         cas_db.delete_schedule(conn, cas_id)
 
 
+# ── Self-Assessment (SA) answers ──────────────────────────────────────────────
+
+def ctrl_get_sa_questions(cas_id: int) -> list[dict]:
+    """Fetch the experience's Self-Assessment questions + current answers
+    live from ManageBac. Returns [{name, question, answer}]."""
+    s, base = ctrl_session()
+    form = cas_api.fetch_sa_form(s, base, cas_id)
+    return form["questions"]
+
+
+def ctrl_save_sa_answer(cas_id: int, name: str, text: str) -> None:
+    """Save one SA answer (the rest of the page's answers are re-submitted
+    unchanged — ManageBac saves the whole form at once)."""
+    s, base = ctrl_session()
+    csrf = cas_api.get_csrf(s, f"{base}/student/ib/activity/cas/{cas_id}/answers")
+    cas_api.save_sa_answers(s, base, cas_id, csrf, {name: text})
+
+
+def ctrl_build_sa_prompt(cas_id: int, question: str, notes: str = "",
+                         existing: Optional[str] = None) -> str:
+    """Copy-paste prompt for answering one SA question. Proposal + LOs and
+    the full session history are always attached as evidence."""
+    import cas_ai
+    proposal = ctrl_load_proposal(cas_id)
+    history = _load_history_for(cas_id)
+    system = cas_ai.sa_system_with_context(proposal)
+    _, user = cas_ai.build_prompt(notes, system, "sa_question",
+                                  existing=existing, history=history,
+                                  question=question)
+    return f"=== SYSTEM PROMPT ===\n{system}\n\n=== YOUR MESSAGE ===\n{user}"
+
+
+def ctrl_generate_sa(cas_id: int, question: str, notes: str = "",
+                     existing: Optional[str] = None) -> str:
+    """Direct AI answer for one SA question (anthropic / ollama providers)."""
+    import cas_ai
+    cfg = ctrl_config()
+    proposal = ctrl_load_proposal(cas_id)
+    history = _load_history_for(cas_id)
+    return cas_ai.ai_generate(notes, cfg.get("ai_model", "claude-opus-4-6"),
+                              proposal=proposal, cfg=cfg, kind="sa_question",
+                              existing=existing, history=history,
+                              question=question)
+
+
 # ── Placeholders ──────────────────────────────────────────────────────────────
 
 def ctrl_list_placeholder_queue() -> list[dict]:
