@@ -5,9 +5,9 @@ const AppShell = window.MonoAppShell;
 const API = window.API;
 
 function Prototype() {
-  // modal target: null | "photos-new" | "photos-edit" | "settings" | "placeholders"
-  // (Journal + AI flows are NOT modals anymore — they live in the flat
-  //  Composer panel docked at the bottom of the main panel.)
+  // modal target: null | "photos-new" | "photos-edit" | "settings"
+  // (Journal + AI flows live in the flat Composer panel at the bottom of the
+  //  main panel; the Placeholder Hub is a collapsible right side panel.)
   const [modal, setModal] = React.useState(null);
   const [activeId, setActiveId] = React.useState(null);
   const [settingsTab, setSettingsTab] = React.useState("account");
@@ -15,6 +15,9 @@ function Prototype() {
   // Composer payload: null (hidden) | { mode, casId, rid?, date?,
   //   existingText?, initialText?, isFinal?, isPlaceholderFill? }
   const [composer, setComposer] = React.useState(null);
+
+  // Placeholder Hub side panel (collapsed by default)
+  const [hubOpen, setHubOpen] = React.useState(false);
 
   // ── App data ────────────────────────────────────────────────────────────
   const [status, setStatus] = React.useState({ logged_in: false, ai_provider: "prompt" });
@@ -212,6 +215,7 @@ function Prototype() {
     if (payload && payload.casId) setActiveId(payload.casId);
   }, []);
   const closeComposer = React.useCallback(() => setComposer(null), []);
+  const toggleHub = React.useCallback(() => setHubOpen((v) => !v), []);
 
   const activeExp = experiences.find((e) => e.id === activeId) || null;
 
@@ -228,8 +232,9 @@ function Prototype() {
     status, appState, syncState, config,
     experiences, activeId, activeExp, reflections, reflLoading,
     pendingCount, modalPayload,
-    // composer
+    // composer + hub side panel
     composer, openComposer, closeComposer,
+    hubOpen, toggleHub,
     // setters
     setActiveId, setModalPayload,
     // mutations
@@ -241,7 +246,6 @@ function Prototype() {
   if      (modal === "photos-new")     modalEl = <window.NewPhotosModal_Mono />;
   else if (modal === "photos-edit")    modalEl = <window.EditPhotosModal_Mono />;
   else if (modal === "settings")       modalEl = <window.SettingsModal_Mono tab={settingsTab} onTab={setSettingsTab} />;
-  else if (modal === "placeholders")   modalEl = <window.PlaceholderHubModal_Mono />;
 
   return (
     <MonoCtx.Provider value={ctxValue}>
@@ -263,7 +267,7 @@ function Prototype() {
           onOpenJournal={() => openComposer({ mode: "write", casId: activeId })}
           onOpenPhotos={() => setModal("photos-new")}
           onOpenSettings={() => setModal("settings")}
-          onOpenPlaceholders={() => setModal("placeholders")}
+          onOpenPlaceholders={toggleHub}
           onEditRefl={(r) => {
             if (r.kind === "album") {
               setModalPayload({ rid: r.id, casId: activeId, refl: r });

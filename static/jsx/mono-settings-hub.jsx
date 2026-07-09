@@ -731,8 +731,8 @@ Deletion cannot be undone — only enable this when you are <i>absolutely sure</
     </>);
 }
 
-// ── Placeholder Hub ────────────────────────────────────────────────────
-function PlaceholderHubModal() {
+// ── Placeholder Hub — collapsible right side panel (not a modal) ────────
+function PlaceholderHubPanel() {
   const ctx = React.useContext(window.MonoCtx);
   const [schedules, setSchedules] = React.useState([]);
   const [queue, setQueue] = React.useState([]);
@@ -752,7 +752,9 @@ function PlaceholderHubModal() {
     }
   }, []);
 
-  React.useEffect(() => { reload(); }, [reload]);
+  // Mounted only while open — also re-pull when the global pending count
+  // changes (e.g. a placeholder got filled via the composer).
+  React.useEffect(() => { reload(); }, [reload, ctx.pendingCount]);
 
   async function toggleSchedule(s, on) {
     setError(null);
@@ -795,9 +797,9 @@ function PlaceholderHubModal() {
   }
 
   function openFill(q) {
-    // Close this modal and open the flat composer (AI tab) pre-targeted at
-    // the placeholder — also switches the main panel to that experience.
-    ctx.close();
+    // Open the flat composer (AI tab) pre-targeted at the placeholder —
+    // also switches the main panel to that experience. The panel stays
+    // open so the user can work through the queue item by item.
     ctx.openComposer({
       mode: "ai",
       casId: q.cas_id,
@@ -817,64 +819,54 @@ function PlaceholderHubModal() {
       : { cas_id: e.id, exp: e, on: false, everyDays: 1, interval_days: 1, last_run_date: null };
   });
 
+  const Glass = window.MonoGlass;
   return (
-    <ModalShell title="Placeholders" width={920}
-      footer={<>
-        <span style={{ fontSize: 11, color: N.inkMid, marginRight: "auto" }}>
-          {loading ? "Loading…" :
-            `${queue.length} pending · ${fullSchedList.filter((s) => s.on).length} active schedules`}
-        </span>
-        <Btn onClick={runAllDue} disabled={loading}>▶ Run all due</Btn>
-        <Btn onClick={ctx.close}>Done</Btn>
-      </>}
-      bodyStyle={{ padding: 0 }}>
-      <div style={{ display: "flex", height: 500, marginTop: -4 }}>
-        <div style={{
-          width: 340, padding: "16px 16px 12px",
-          background: "rgba(0,0,0,0.02)",
-          borderRight: "0.5px solid " + N.hairline,
-          display: "flex", flexDirection: "column", gap: 10, overflow: "auto"
-        }}>
-          <PaneHeader icon="repeat" title="Schedules" sub="When enabled, placeholder reflections will be automatically created at intervals." />
-          {loading && <div style={{ fontSize: 11, color: N.inkSoft }}>Loading…</div>}
-          {!loading && !fullSchedList.length && (
-            <div style={{ fontSize: 11, color: N.inkSoft }}>No active experiences.</div>
-          )}
-          {fullSchedList.map((s) =>
-            <ScheduleRow
-              key={s.cas_id}
-              exp={s.exp.name || `Exp ${s.cas_id}`}
-              strands={s.exp.strands && s.exp.strands.length
-                       ? s.exp.strands
-                       : [s.exp.strand || "activity"]}
-              everyDays={s.everyDays}
-              next={s.last_run_date ? `+${s.everyDays}d after ${s.last_run_date}` : "—"}
-              on={s.on}
-              onToggle={() => toggleSchedule(s, !s.on)}
-              onStep={(d) => stepInterval(s, d)}
-              onRunNow={() => runOne(s.cas_id)}
-            />
-          )}
+    <Glass style={{
+      width: 300, borderRadius: 14, flexShrink: 0,
+      display: "flex", flexDirection: "column", overflow: "hidden",
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: "12px 14px 10px",
+        borderBottom: "0.5px solid " + N.hairline,
+        display: "flex", alignItems: "center", gap: 8,
+      }}>
+        <I name="tray" size={14} stroke={1.7} style={{ color: N.inkMid }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: N.inkDeep, letterSpacing: -0.1 }}>
+            Placeholders
+          </div>
+          <div style={{ fontSize: 10, color: N.inkSoft, marginTop: 1 }}>
+            {loading ? "Loading…"
+                     : `${queue.length} pending · ${fullSchedList.filter((s) => s.on).length} active schedules`}
+          </div>
         </div>
-
-        <div style={{
-          flex: 1, padding: "16px 18px 12px",
-          display: "flex", flexDirection: "column", gap: 10, overflow: "auto"
+        <button onClick={ctx.toggleHub} className="mono-close" title="Collapse panel" style={{
+          width: 20, height: 20, borderRadius: "50%", border: "none",
+          background: "rgba(0,0,0,0.06)", color: "rgba(20,20,20,0.65)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
         }}>
-          <PaneHeader icon="inbox" title="Queue" sub="Click an item to Generate" />
-          {loading && <div style={{ fontSize: 11, color: N.inkSoft }}>Loading…</div>}
-          {!loading && !queue.length && (
-            <div style={{ fontSize: 12, color: N.inkSoft, padding: 16, textAlign: "center" }}>
-              No pending placeholders. All caught up!
-            </div>
-          )}
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {queue.map((q) => {
-              const qExp = ctx.experiences.find((e) => e.id === q.cas_id) || {};
-              const qStrands = qExp.strands && qExp.strands.length
-                ? qExp.strands
-                : [qExp.strand || "activity"];
-              return (
+          <I name="chevron" size={10} stroke={2} />
+        </button>
+      </div>
+
+      {/* Scrollable body — Queue first (primary action), Schedules below */}
+      <div style={{ flex: 1, overflow: "auto", padding: "12px 12px 10px",
+                    display: "flex", flexDirection: "column", gap: 10 }}>
+        <PaneHeader icon="inbox" title="Queue" sub="Click an item to fill it with the composer" />
+        {!loading && !queue.length && (
+          <div style={{ fontSize: 11, color: N.inkSoft, padding: "4px 2px" }}>
+            No pending placeholders. All caught up!
+          </div>
+        )}
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {queue.map((q) => {
+            const qExp = ctx.experiences.find((e) => e.id === q.cas_id) || {};
+            const qStrands = qExp.strands && qExp.strands.length
+              ? qExp.strands
+              : [qExp.strand || "activity"];
+            return (
               <QueueRow
                 key={q.rid}
                 date={q.group_date}
@@ -884,16 +876,47 @@ function PlaceholderHubModal() {
                 preview={q.body_html}
                 onStart={() => openFill(q)}
               />
-              );
-            })}
-          </div>
+            );
+          })}
         </div>
+
+        <div style={{ height: 1, background: N.hairline, margin: "4px 0" }} />
+
+        <PaneHeader icon="repeat" title="Schedules"
+                    sub="Auto-create placeholder reflections at intervals" />
+        {!loading && !fullSchedList.length && (
+          <div style={{ fontSize: 11, color: N.inkSoft }}>No active experiences.</div>
+        )}
+        {fullSchedList.map((s) =>
+          <ScheduleRow
+            key={s.cas_id}
+            exp={s.exp.name || `Exp ${s.cas_id}`}
+            strands={s.exp.strands && s.exp.strands.length
+                     ? s.exp.strands
+                     : [s.exp.strand || "activity"]}
+            everyDays={s.everyDays}
+            next={s.last_run_date ? `+${s.everyDays}d after ${s.last_run_date}` : "—"}
+            on={s.on}
+            onToggle={() => toggleSchedule(s, !s.on)}
+            onStep={(d) => stepInterval(s, d)}
+            onRunNow={() => runOne(s.cas_id)}
+          />
+        )}
       </div>
-      {error && (
-        <div style={{ padding: "8px 18px", color: "#a4332e", fontSize: 11.5,
-                      borderTop: "0.5px solid " + N.hairline, background: "rgba(216,80,74,0.06)" }}>⚠ {error}</div>
-      )}
-    </ModalShell>);
+
+      {/* Footer */}
+      <div style={{
+        padding: "8px 12px",
+        borderTop: "0.5px solid " + N.hairline,
+        display: "flex", alignItems: "center", gap: 8,
+      }}>
+        {error && <span style={{ fontSize: 10.5, color: "#a4332e", flex: 1,
+                                 overflow: "hidden", textOverflow: "ellipsis",
+                                 whiteSpace: "nowrap" }}>⚠ {error}</span>}
+        <div style={{ flex: 1 }} />
+        <Btn onClick={runAllDue} disabled={loading}>▶ Run all due</Btn>
+      </div>
+    </Glass>);
 }
 
 function PaneHeader({ icon, title, sub }) {
@@ -1038,4 +1061,4 @@ function QueueRow({ date, strands, exp, source, preview, onStart }) {
 }
 
 window.SettingsModal_Mono = SettingsModal;
-window.PlaceholderHubModal_Mono = PlaceholderHubModal;
+window.MonoPlaceholderPanel = PlaceholderHubPanel;
