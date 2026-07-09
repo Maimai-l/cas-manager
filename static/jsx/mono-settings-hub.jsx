@@ -10,6 +10,7 @@ const Btn = window.MonoBtn;
 const Pill = window.MonoPill;
 const StrandTag = window.MonoStrandTag;
 const API = window.API;
+const HUB_SEP = window.MONO_SEP || "1px solid rgba(0,0,0,0.10)";
 
 // ── Settings ───────────────────────────────────────────────────────────
 function SettingsModal({ tab = "account", onTab }) {
@@ -819,34 +820,37 @@ function PlaceholderHubPanel() {
       : { cas_id: e.id, exp: e, on: false, everyDays: 1, interval_days: 1, last_run_date: null };
   });
 
-  const Glass = window.MonoGlass;
 
-  // Collapsed: a plain vertical strip. Click anywhere on it to expand.
+  // Collapsed: a plain vertical strip joined to the main panel.
+  // Click anywhere on it to expand.
   if (!ctx.hubOpen) {
     return (
-      <Glass
+      <div
         onClick={ctx.toggleHub}
         title={`Placeholders — ${queue.length} pending. Click to expand.`}
         style={{
           width: 30, flexShrink: 0, cursor: "pointer",
+          background: "#f4f4f3", borderLeft: HUB_SEP,
           display: "flex", flexDirection: "column", alignItems: "center",
-          padding: "10px 0", gap: 8,
+          padding: "12px 0", gap: 8,
         }}>
         <I name="tray" size={14} stroke={1.7} style={{ color: N.inkMid }} />
         {queue.length > 0 && (
           <span className="tnum" style={{
             fontSize: 10, color: A.onAccent, background: A.solid,
             minWidth: 16, textAlign: "center", padding: "1px 0",
+            borderRadius: 4,
           }}>{queue.length}</span>
         )}
-      </Glass>);
+      </div>);
   }
 
   // Expanded: same strip, grown wide. Queue on top, schedules below —
   // no headers, the structure carries the hierarchy.
   return (
-    <Glass style={{
+    <div style={{
       width: 300, flexShrink: 0,
+      background: "#fafafa", borderLeft: HUB_SEP,
       display: "flex", flexDirection: "column", overflow: "hidden",
     }}>
       {/* Slim top row: count + collapse — no title */}
@@ -854,10 +858,10 @@ function PlaceholderHubPanel() {
         onClick={ctx.toggleHub}
         title="Collapse panel"
         style={{
-          padding: "8px 12px",
-          borderBottom: "0.5px solid " + N.hairline,
+          height: 42, boxSizing: "border-box", padding: "0 12px",
+          borderBottom: HUB_SEP,
           display: "flex", alignItems: "center", gap: 8,
-          cursor: "pointer",
+          cursor: "pointer", flexShrink: 0,
         }}>
         <I name="tray" size={13} stroke={1.7} style={{ color: N.inkMid }} />
         <span style={{ flex: 1, fontSize: 11, color: N.inkMid }}>
@@ -897,11 +901,11 @@ function PlaceholderHubPanel() {
 
       {/* Schedules zone — separated by a solid divider, no header */}
       <div style={{
-        borderTop: "1px solid rgba(0,0,0,0.1)",
+        borderTop: HUB_SEP,
         maxHeight: "45%", overflow: "auto",
         padding: "10px 12px",
         display: "flex", flexDirection: "column", gap: 6,
-        background: "rgba(0,0,0,0.02)",
+        background: "#f4f4f3",
       }}>
         {!loading && !fullSchedList.length && (
           <div style={{ fontSize: 11, color: N.inkSoft }}>No active experiences.</div>
@@ -925,7 +929,7 @@ function PlaceholderHubPanel() {
           <div style={{ fontSize: 10.5, color: "#a4332e" }}>⚠ {error}</div>
         )}
       </div>
-    </Glass>);
+    </div>);
 }
 
 function Toggle({ on, onClick }) {
@@ -952,10 +956,10 @@ function Toggle({ on, onClick }) {
 function ScheduleRow({ exp, strands, everyDays, next, on, onToggle, onStep, onRunNow }) {
   return (
     <div className="mono-schedule-row" style={{
-      padding: "11px 12px", borderRadius: 10,
-      background: on ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.4)",
-      boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.06)",
-      opacity: on ? 1 : 0.7,
+      padding: "10px 12px", borderRadius: 5,
+      background: "#fff",
+      boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
+      opacity: on ? 1 : 0.65,
       display: "flex", flexDirection: "column", gap: 8,
       flexShrink: 0,
       transition: "background 0.15s"
@@ -1021,9 +1025,9 @@ function QueueRow({ date, strands, exp, preview, onStart }) {
       onClick={onStart}
       style={{
         display: "flex", alignItems: "center", gap: 10,
-        padding: "9px 12px",
-        background: "rgba(255,255,255,0.65)",
-        boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.06)",
+        padding: "9px 12px", borderRadius: 5,
+        background: "#fff",
+        boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
         flexShrink: 0,
         cursor: "pointer", transition: "background 0.15s"
       }}>
@@ -1044,9 +1048,10 @@ function QueueRow({ date, strands, exp, preview, onStart }) {
       <button
         onClick={(e) => { e.stopPropagation(); onStart && onStart(); }}
         style={{
-          fontSize: 10.5, padding: "3px 10px",
+          fontSize: 10.5, padding: "3px 10px", borderRadius: 4,
           background: A.solid, color: A.onAccent,
           border: "none", cursor: "pointer", fontWeight: 500,
+          whiteSpace: "nowrap", flexShrink: 0,
           fontFamily: "inherit"
         }}>
         Fill
