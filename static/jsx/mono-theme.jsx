@@ -5,7 +5,7 @@
 const MONO_ACCENT = {
   solid:    "#b1e245",
   onAccent: "#1f2a08",
-  shadow:   "0 1px 3px rgba(90,120,30,0.22), inset 0 0.5px 0 rgba(255,255,255,0.4)",
+  shadow:   "none",   // flat demo: no glow on accent elements
 };
 
 const MONO_NEUTRALS = {

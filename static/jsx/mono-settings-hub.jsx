@@ -51,7 +51,7 @@ function SettingsTab({ icon, label, active, onClick }) {
       style={{
         display: "flex", alignItems: "center", gap: 9,
         padding: "7px 10px", borderRadius: 7,
-        fontSize: 12, fontWeight: active ? 600 : 500,
+        fontSize: 12, fontWeight: 500,
         color: active ? N.inkDeep : N.inkMid,
         background: active ? "rgba(255,255,255,0.8)" : "transparent",
         boxShadow: active ? "inset 0 0 0 0.5px rgba(0,0,0,0.08)" : "none",
@@ -71,7 +71,7 @@ function AccountPane() {
   return (
     <>
       <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: N.inkDeep, marginBottom: 2 }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep, marginBottom: 2 }}>
           ManageBac connection
         </div>
         <div style={{ fontSize: 11, color: N.inkMid, lineHeight: 1.5 }}>
@@ -112,7 +112,7 @@ function LoggedInBlock() {
         <I name="check" size={18} stroke={2.2} />
       </div>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 12.5, fontWeight: 600, color: N.inkDeep }}>
+        <div style={{ fontSize: 12.5, fontWeight: 500, color: N.inkDeep }}>
           Connected to ManageBac
         </div>
         <div style={{ fontSize: 10.5, color: N.inkSoft }}>
@@ -250,7 +250,7 @@ function AIProviderPane() {
   return (
     <>
       <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: N.inkDeep, marginBottom: 2 }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep, marginBottom: 2 }}>
           AI provider
         </div>
         <div style={{ fontSize: 11, color: N.inkMid }}>
@@ -344,7 +344,7 @@ function PromptsPane() {
   return (
     <>
       <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: N.inkDeep, marginBottom: 2 }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep, marginBottom: 2 }}>
           System prompts
         </div>
         <div style={{ fontSize: 11, color: N.inkMid, lineHeight: 1.55 }}>
@@ -360,8 +360,8 @@ function PromptsPane() {
       {!loading && Object.keys(grouped).map((intent) => (
         <div key={intent} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{
-            fontSize: 10, fontWeight: 700, color: N.inkSoft,
-            letterSpacing: 0.6, textTransform: "uppercase",
+            fontSize: 10, fontWeight: 500, color: N.inkSoft,
+            
             marginTop: 4
           }}>{intent}</div>
           {grouped[intent].map((p) => (
@@ -446,13 +446,13 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
         }}>
         <I name="pen" size={13} stroke={1.7} style={{ color: N.inkMid, flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 600, color: N.inkDeep }}>{data.label}</div>
+          <div style={{ fontSize: 12.5, fontWeight: 500, color: N.inkDeep }}>{data.label}</div>
           <div style={{ fontSize: 10.5, color: N.inkSoft, marginTop: 2,
                         fontFamily: "ui-monospace, SF Mono, Menlo, monospace" }}>{data.slot}</div>
         </div>
         {data.is_customized ? (
           <span style={{
-            fontSize: 10, fontWeight: 600,
+            fontSize: 10, fontWeight: 500,
             padding: "2px 8px", borderRadius: 99,
             background: A.solid, color: A.onAccent,
           }}>Customized</span>
@@ -573,7 +573,7 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
                 padding: "6px 14px", borderRadius: 7, border: "none",
                 background: dirty ? A.solid : "rgba(255,255,255,0.85)",
                 color: dirty ? A.onAccent : N.ink,
-                fontWeight: 600, fontSize: 11.5,
+                fontWeight: 500, fontSize: 11.5,
                 cursor: (saving || !dirty) ? "default" : "pointer",
                 opacity: (saving || !dirty) ? 0.5 : 1,
                 boxShadow: dirty ? A.shadow : "inset 0 0 0 0.5px rgba(0,0,0,0.08)",
@@ -609,7 +609,7 @@ function ProviderCard({ name, sub, icon, active, onClick }) {
       }}>
         <I name={icon} size={13} stroke={1.7} />
       </div>
-      <div style={{ fontSize: 12, fontWeight: 600, color: N.inkDeep, display: "flex", alignItems: "center", gap: 5 }}>
+      <div style={{ fontSize: 12, fontWeight: 500, color: N.inkDeep, display: "flex", alignItems: "center", gap: 5 }}>
         {name}
         {active &&
           <span style={{
@@ -634,7 +634,7 @@ function GeneralPane() {
   return (
     <>
       <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: N.inkDeep, marginBottom: 2 }}>General</div>
+        <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep, marginBottom: 2 }}>General</div>
         <div style={{ fontSize: 11, color: N.inkMid }}>App-level settings stored in <code>cas_config.json</code>.</div>
       </div>
       <div>
@@ -692,7 +692,7 @@ function DangerPane() {
   return (
     <>
       <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: "#a4332e", marginBottom: 2 }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: "#a4332e", marginBottom: 2 }}>
           Danger Zone
         </div>
         <div style={{ fontSize: 11, color: N.inkMid, lineHeight: 1.55 }}>
@@ -708,7 +708,7 @@ Deletion cannot be undone — only enable this when you are <i>absolutely sure</
         display: "flex", alignItems: "center", gap: 12
       }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 600, color: "#7a1f1a" }}>
+          <div style={{ fontSize: 12.5, fontWeight: 500, color: "#7a1f1a" }}>
             Enable destructive actions
           </div>
           <div style={{ fontSize: 10.5, color: "#8b3e39", marginTop: 2 }}>
@@ -820,70 +820,89 @@ function PlaceholderHubPanel() {
   });
 
   const Glass = window.MonoGlass;
+
+  // Collapsed: a plain vertical strip. Click anywhere on it to expand.
+  if (!ctx.hubOpen) {
+    return (
+      <Glass
+        onClick={ctx.toggleHub}
+        title={`Placeholders — ${queue.length} pending. Click to expand.`}
+        style={{
+          width: 30, flexShrink: 0, cursor: "pointer",
+          display: "flex", flexDirection: "column", alignItems: "center",
+          padding: "10px 0", gap: 8,
+        }}>
+        <I name="tray" size={14} stroke={1.7} style={{ color: N.inkMid }} />
+        {queue.length > 0 && (
+          <span className="tnum" style={{
+            fontSize: 10, color: A.onAccent, background: A.solid,
+            minWidth: 16, textAlign: "center", padding: "1px 0",
+          }}>{queue.length}</span>
+        )}
+      </Glass>);
+  }
+
+  // Expanded: same strip, grown wide. Queue on top, schedules below —
+  // no headers, the structure carries the hierarchy.
   return (
     <Glass style={{
-      width: 300, borderRadius: 14, flexShrink: 0,
+      width: 300, flexShrink: 0,
       display: "flex", flexDirection: "column", overflow: "hidden",
     }}>
-      {/* Header */}
-      <div style={{
-        padding: "12px 14px 10px",
-        borderBottom: "0.5px solid " + N.hairline,
-        display: "flex", alignItems: "center", gap: 8,
-      }}>
-        <I name="tray" size={14} stroke={1.7} style={{ color: N.inkMid }} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: N.inkDeep, letterSpacing: -0.1 }}>
-            Placeholders
-          </div>
-          <div style={{ fontSize: 10, color: N.inkSoft, marginTop: 1 }}>
-            {loading ? "Loading…"
-                     : `${queue.length} pending · ${fullSchedList.filter((s) => s.on).length} active schedules`}
-          </div>
-        </div>
-        <button onClick={ctx.toggleHub} className="mono-close" title="Collapse panel" style={{
-          width: 20, height: 20, borderRadius: "50%", border: "none",
-          background: "rgba(0,0,0,0.06)", color: "rgba(20,20,20,0.65)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
+      {/* Slim top row: count + collapse — no title */}
+      <div
+        onClick={ctx.toggleHub}
+        title="Collapse panel"
+        style={{
+          padding: "8px 12px",
+          borderBottom: "0.5px solid " + N.hairline,
+          display: "flex", alignItems: "center", gap: 8,
+          cursor: "pointer",
         }}>
-          <I name="chevron" size={10} stroke={2} />
-        </button>
+        <I name="tray" size={13} stroke={1.7} style={{ color: N.inkMid }} />
+        <span style={{ flex: 1, fontSize: 11, color: N.inkMid }}>
+          {loading ? "Loading…" : `${queue.length} pending`}
+        </span>
+        <I name="chevron" size={11} stroke={1.8} style={{ color: N.inkSoft }} />
       </div>
 
-      {/* Scrollable body — Queue first (primary action), Schedules below */}
-      <div style={{ flex: 1, overflow: "auto", padding: "12px 12px 10px",
-                    display: "flex", flexDirection: "column", gap: 10 }}>
-        <PaneHeader icon="inbox" title="Queue" sub="Click an item to fill it with the composer" />
+      {/* Queue zone */}
+      <div style={{ flex: 1, overflow: "auto", padding: "10px 12px",
+                    display: "flex", flexDirection: "column", gap: 6 }}>
         {!loading && !queue.length && (
           <div style={{ fontSize: 11, color: N.inkSoft, padding: "4px 2px" }}>
-            No pending placeholders. All caught up!
+            No pending placeholders.
           </div>
         )}
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {queue.map((q) => {
-            const qExp = ctx.experiences.find((e) => e.id === q.cas_id) || {};
-            const qStrands = qExp.strands && qExp.strands.length
-              ? qExp.strands
-              : [qExp.strand || "activity"];
-            return (
-              <QueueRow
-                key={q.rid}
-                date={q.group_date}
-                strands={qStrands}
-                exp={q.name || `Exp ${q.cas_id}`}
-                source="Placeholder"
-                preview={q.body_html}
-                onStart={() => openFill(q)}
-              />
-            );
-          })}
-        </div>
+        {queue.map((q) => {
+          const qExp = ctx.experiences.find((e) => e.id === q.cas_id) || {};
+          const qStrands = qExp.strands && qExp.strands.length
+            ? qExp.strands
+            : [qExp.strand || "activity"];
+          return (
+            <QueueRow
+              key={q.rid}
+              date={q.group_date}
+              strands={qStrands}
+              exp={q.name || `Exp ${q.cas_id}`}
+              preview={q.body_html}
+              onStart={() => openFill(q)}
+            />
+          );
+        })}
+        <div style={{ flex: 1 }} />
+        <Btn onClick={runAllDue} disabled={loading}
+             style={{ alignSelf: "flex-end" }}>▶ Run all due</Btn>
+      </div>
 
-        <div style={{ height: 1, background: N.hairline, margin: "4px 0" }} />
-
-        <PaneHeader icon="repeat" title="Schedules"
-                    sub="Auto-create placeholder reflections at intervals" />
+      {/* Schedules zone — separated by a solid divider, no header */}
+      <div style={{
+        borderTop: "1px solid rgba(0,0,0,0.1)",
+        maxHeight: "45%", overflow: "auto",
+        padding: "10px 12px",
+        display: "flex", flexDirection: "column", gap: 6,
+        background: "rgba(0,0,0,0.02)",
+      }}>
         {!loading && !fullSchedList.length && (
           <div style={{ fontSize: 11, color: N.inkSoft }}>No active experiences.</div>
         )}
@@ -902,34 +921,11 @@ function PlaceholderHubPanel() {
             onRunNow={() => runOne(s.cas_id)}
           />
         )}
-      </div>
-
-      {/* Footer */}
-      <div style={{
-        padding: "8px 12px",
-        borderTop: "0.5px solid " + N.hairline,
-        display: "flex", alignItems: "center", gap: 8,
-      }}>
-        {error && <span style={{ fontSize: 10.5, color: "#a4332e", flex: 1,
-                                 overflow: "hidden", textOverflow: "ellipsis",
-                                 whiteSpace: "nowrap" }}>⚠ {error}</span>}
-        <div style={{ flex: 1 }} />
-        <Btn onClick={runAllDue} disabled={loading}>▶ Run all due</Btn>
+        {error && (
+          <div style={{ fontSize: 10.5, color: "#a4332e" }}>⚠ {error}</div>
+        )}
       </div>
     </Glass>);
-}
-
-function PaneHeader({ icon, title, sub }) {
-  return (
-    <div style={{ display: "flex", alignItems: "flex-end", gap: 10, paddingBottom: 4 }}>
-      <div style={{ flex: 1 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <I name={icon} size={13} stroke={1.7} style={{ color: N.inkMid }} />
-          <span style={{ fontSize: 13.5, fontWeight: 700, color: N.inkDeep, letterSpacing: -0.2 }}>{title}</span>
-        </div>
-        <div style={{ fontSize: 10.5, color: N.inkSoft, marginTop: 2 }}>{sub}</div>
-      </div>
-    </div>);
 }
 
 function Toggle({ on, onClick }) {
@@ -967,7 +963,7 @@ function ScheduleRow({ exp, strands, everyDays, next, on, onToggle, onStep, onRu
       <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
         <StrandTag strands={strands} compact />
         <span style={{
-          fontSize: 12, fontWeight: 600, color: N.inkDeep,
+          fontSize: 12, fontWeight: 500, color: N.inkDeep,
           flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"
         }}>{exp}</span>
         <Toggle on={on} onClick={onToggle} />
@@ -983,7 +979,7 @@ function ScheduleRow({ exp, strands, everyDays, next, on, onToggle, onStep, onRu
           <button onClick={() => onStep && onStep(-1)} style={stepperBtn}>−</button>
           <span className="tnum" style={{
             padding: "2px 9px", display: "inline-flex", alignItems: "center",
-            fontWeight: 600, color: N.inkDeep, minWidth: 18, justifyContent: "center"
+            fontWeight: 500, color: N.inkDeep, minWidth: 18, justifyContent: "center"
           }}>{everyDays}</span>
           <button onClick={() => onStep && onStep(1)} style={stepperBtn}>+</button>
         </div>
@@ -1012,7 +1008,7 @@ const stepperBtn = {
   fontWeight: 500, fontFamily: "inherit"
 };
 
-function QueueRow({ date, strands, exp, source, preview, onStart }) {
+function QueueRow({ date, strands, exp, preview, onStart }) {
   const previewText = React.useMemo(() => {
     const d = document.createElement("div");
     d.innerHTML = preview || "";
@@ -1025,7 +1021,7 @@ function QueueRow({ date, strands, exp, source, preview, onStart }) {
       onClick={onStart}
       style={{
         display: "flex", alignItems: "center", gap: 10,
-        padding: "9px 12px", borderRadius: 9,
+        padding: "9px 12px",
         background: "rgba(255,255,255,0.65)",
         boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.06)",
         flexShrink: 0,
@@ -1034,28 +1030,26 @@ function QueueRow({ date, strands, exp, source, preview, onStart }) {
       <StrandTag strands={strands} compact />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
-          fontSize: 12, fontWeight: 600, color: N.inkDeep,
+          fontSize: 12, fontWeight: 500, color: N.inkDeep,
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"
         }}>{exp}</div>
-        <div style={{ fontSize: 10, color: N.inkSoft, display: "flex", gap: 6, marginTop: 1 }}>
-          <span className="tnum">{date}</span>
-          <span>·</span>
-          <span>{source}</span>
+        <div className="tnum" style={{ fontSize: 10, color: N.inkSoft, marginTop: 1 }}>
+          {date}
         </div>
         {previewText && (
-          <div style={{ fontSize: 10.5, color: N.inkMid, marginTop: 3, fontStyle: "italic",
+          <div style={{ fontSize: 10.5, color: N.inkMid, marginTop: 3,
                         overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{previewText}</div>
         )}
       </div>
       <button
         onClick={(e) => { e.stopPropagation(); onStart && onStart(); }}
         style={{
-          fontSize: 10.5, padding: "3px 10px", borderRadius: 6,
+          fontSize: 10.5, padding: "3px 10px",
           background: A.solid, color: A.onAccent,
-          border: "none", cursor: "pointer", fontWeight: 600,
+          border: "none", cursor: "pointer", fontWeight: 500,
           fontFamily: "inherit"
         }}>
-        Start here
+        Fill
       </button>
     </div>);
 }

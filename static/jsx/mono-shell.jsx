@@ -131,7 +131,7 @@ function Btn({ children, primary, ghost, icon, iconRight, onClick, style, title,
   if (primary) {
     look = {
       background: A.solid, color: A.onAccent,
-      fontWeight: 600, boxShadow: A.shadow
+      fontWeight: 500, boxShadow: A.shadow
     };
   } else if (ghost) {
     look = {
@@ -241,15 +241,9 @@ function Sidebar({ experiences, activeId, onSelect, syncState }) {
     }}>
       <div style={{ padding: "12px 14px 6px" }}>
         <div style={{
-          fontSize: 10, fontWeight: 700,
-          letterSpacing: 0.6, textTransform: "uppercase",
-          color: N.inkSoft
-        }}>Experiences</div>
-        <div style={{
-          marginTop: 8, display: "flex", alignItems: "center", gap: 6,
+          display: "flex", alignItems: "center", gap: 6,
           height: 26, padding: "0 9px",
           background: "rgba(255,255,255,0.75)",
-          borderRadius: 7,
           fontSize: 11.5,
           boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.06)"
         }}>
@@ -278,9 +272,9 @@ function Sidebar({ experiences, activeId, onSelect, syncState }) {
         )}
         {completed.length > 0 && (
           <div style={{
-            padding: "12px 16px 4px", fontSize: 10,
-            fontWeight: 700, color: N.inkSoft,
-            letterSpacing: 0.6, textTransform: "uppercase"
+            margin: "10px 16px 4px", paddingTop: 8,
+            borderTop: "0.5px solid " + N.hairline,
+            fontSize: 10.5, color: N.inkSoft
           }}>Completed</div>
         )}
         {completed.map((e) =>
@@ -288,9 +282,9 @@ function Sidebar({ experiences, activeId, onSelect, syncState }) {
         )}
         {deleted.length > 0 && (
           <div style={{
-            padding: "12px 16px 4px", fontSize: 10,
-            fontWeight: 700, color: "#a4332e",
-            letterSpacing: 0.6, textTransform: "uppercase"
+            margin: "10px 16px 4px", paddingTop: 8,
+            borderTop: "0.5px solid " + N.hairline,
+            fontSize: 10.5, color: "#a4332e"
           }}>Deleted</div>
         )}
         {deleted.map((e) =>
@@ -311,19 +305,13 @@ const _TOOLBAR_BTN_STYLE = {
   transition: "background 0.12s, color 0.12s"
 };
 
-function TopRightToolbar({ dotKind, pendingCount, onOpenPlaceholders, onOpenSettings }) {
-  const ctx = React.useContext(window.MonoCtx);
-  const hubOpen = !!ctx.hubOpen;
+function TopRightToolbar({ dotKind, onOpenSettings }) {
   const dotColor =
     dotKind === "green"  ? "#b1e245" :
     dotKind === "yellow" ? "#e7c64a" : "#d8504a";
   const dotLabel =
     dotKind === "green"  ? "Online" :
     dotKind === "yellow" ? "Syncing" : "Offline";
-  const dotGlow =
-    dotKind === "green"  ? "0 0 0 2px rgba(177,226,69,0.28), inset 0 0 0 0.5px rgba(255,255,255,0.4)" :
-    dotKind === "yellow" ? "0 0 0 2px rgba(231,198,74,0.28), inset 0 0 0 0.5px rgba(255,255,255,0.4)" :
-                           "0 0 0 2px rgba(216,80,74,0.28),  inset 0 0 0 0.5px rgba(255,255,255,0.4)";
   return (
     <div style={{
       position: "absolute", top: 14, right: 18, zIndex: 4,
@@ -333,40 +321,18 @@ function TopRightToolbar({ dotKind, pendingCount, onOpenPlaceholders, onOpenSett
         title={`Status: ${dotLabel}`}
         style={{
           display: "inline-flex", alignItems: "center", gap: 6,
-          height: 28, padding: "0 12px 0 10px", borderRadius: 99,
+          height: 28, padding: "0 12px 0 10px",
           background: "rgba(255,255,255,0.7)",
           boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.07)",
-          fontSize: 11, fontWeight: 600, color: N.ink,
+          fontSize: 11, fontWeight: 500, color: N.ink,
           letterSpacing: 0.1, lineHeight: 1,
         }}>
         <span style={{
-          width: 8, height: 8, borderRadius: "50%",
+          width: 8, height: 8,
           background: dotColor,
-          boxShadow: dotGlow
         }} />
         {dotLabel}
       </span>
-      <button
-        title={`Placeholders${pendingCount ? ` · ${pendingCount} pending` : ""} — ${hubOpen ? "hide" : "show"} panel`}
-        onClick={onOpenPlaceholders}
-        style={{
-          ..._TOOLBAR_BTN_STYLE, position: "relative",
-          ...(hubOpen ? {
-            background: "rgba(255,255,255,0.95)",
-            color: "rgba(20,20,20,0.85)",
-            boxShadow: "inset 0 0 0 1px rgba(20,20,20,0.35)",
-          } : {}),
-        }}>
-        <I name="tray" size={15} stroke={1.7} />
-        {pendingCount > 0 ? (
-          <span style={{
-            position: "absolute", top: 1, right: 1,
-            width: 7, height: 7, borderRadius: "50%",
-            background: A.solid,
-            boxShadow: "0 0 0 1.5px rgba(255,255,255,0.95)"
-          }} />
-        ) : null}
-      </button>
       <button
         title="Settings"
         onClick={onOpenSettings}
@@ -405,7 +371,7 @@ function SidebarItem({ exp, active, onClick }) {
       <I name={meta.icon} size={13} stroke={1.7} style={{ color: N.inkMid, flexShrink: 0 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
-          fontSize: 12.5, fontWeight: active ? 600 : 500,
+          fontSize: 12.5, fontWeight: 500,
           color: N.inkDeep,
           whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
           textDecoration: isDeleted ? "line-through" : "none",
@@ -433,8 +399,6 @@ function MainPanel({
   const toolbar = (
     <TopRightToolbar
       dotKind={dotKind}
-      pendingCount={pendingCount}
-      onOpenPlaceholders={onOpenPlaceholders}
       onOpenSettings={onOpenSettings}
     />
   );
@@ -447,7 +411,7 @@ function MainPanel({
       }}>
         {toolbar}
         <div style={{ textAlign: "center", maxWidth: 360, color: N.inkMid, padding: 24 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: N.inkDeep, marginBottom: 6 }}>Not logged into ManageBac</div>
+          <div style={{ fontSize: 16, fontWeight: 500, color: N.inkDeep, marginBottom: 6 }}>Not logged into ManageBac</div>
           <div style={{ fontSize: 12, lineHeight: 1.55 }}>
             Click the ⚙ in the top-right corner to open Settings, Account, enter your ManageBac credentials, and then data can be synced.
           </div>
@@ -487,7 +451,7 @@ function MainPanel({
             <StrandTag strands={strands} />
             <span style={{ fontSize: 11, color: N.inkSoft }}>· {activeExp.reflection_count || 0} reflections</span>
           </div>
-          <h2 style={{ margin: "6px 0 0", fontSize: 22, fontWeight: 700, letterSpacing: -0.4, color: N.inkDeep }}>
+          <h2 style={{ margin: "6px 0 0", fontSize: 21, fontWeight: 500, letterSpacing: -0.3, color: N.inkDeep }}>
             {activeExp.name || `Experience ${activeExp.id}`}
           </h2>
           <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -595,7 +559,7 @@ function ReflCard({ refl, casId, onEdit, dangerZone, onDelete, onPhotoError }) {
           <I name={isAlbum ? "image" : "pen"} size={13} stroke={1.6} />
         </div>
         <div>
-          <div className="tnum" style={{ fontSize: 12, fontWeight: 600, color: N.inkDeep }}>
+          <div className="tnum" style={{ fontSize: 12, fontWeight: 500, color: N.inkDeep }}>
             {dateStr || "—"}
           </div>
           <div style={{ fontSize: 10, color: N.inkSoft }}>{subline}</div>
@@ -731,8 +695,8 @@ function AppShell(props) {
             onDeleteRefl={onDeleteRefl}
             appState={props.appState}
           />
-          {/* Placeholder Hub — collapsible side panel instead of a modal */}
-          {ctx.hubOpen && <window.MonoPlaceholderPanel />}
+          {/* Placeholder Hub — permanent rail strip, expands into a panel */}
+          <window.MonoPlaceholderPanel />
         </div>
       </GradientBg>
     </div>);

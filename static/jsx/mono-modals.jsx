@@ -213,7 +213,7 @@ function Dropzone({ files, dragging, totalSize, onPick, onDragOver, onDragLeave,
           }}>
             <I name="upload" size={24} stroke={1.5} />
           </div>
-          <div style={{ fontSize: 13.5, fontWeight: 600, color: N.inkDeep }}>
+          <div style={{ fontSize: 13.5, fontWeight: 500, color: N.inkDeep }}>
             {dragging ? "Drop photos to add" : "Drag photos here"}
           </div>
           <div style={{ fontSize: 11, color: N.inkSoft }}>
