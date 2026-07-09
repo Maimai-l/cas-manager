@@ -1,7 +1,7 @@
-// ── Composer — flat, non-modal journal workbench ────────────────────────
-// Replaces the old 5-screen modal chain (journal-choose / journal-write /
-// ai-1 / ai-2 / ai-3). Docks at the bottom of the main panel so past
-// reflections stay visible (and copyable) while writing.
+// ── Composer — flat, non-modal workbench for journal / final / SA ───────
+// One panel docked at the bottom of the main panel. Type selector picks
+// what gets written: a session journal, the Final Reflection, or one of
+// the experience's Self-Assessment answers (the ManageBac Answers tab).
 const I = window.I;
 const A = window.MONO_ACCENT;
 const N = window.MONO_NEUTRALS;
@@ -91,11 +91,16 @@ function TabBtn({ active, icon, children, onClick }) {
       whiteSpace: "nowrap", flexShrink: 0,
       transition: "background 0.12s",
     }}>
-      <I name={icon} size={11.5} stroke={1.8} />
+      {icon && <I name={icon} size={11.5} stroke={1.8} />}
       {children}
     </button>
   );
 }
+
+const segStyle = {
+  display: "inline-flex", gap: 2, padding: 2,
+  background: "rgba(0,0,0,0.05)", borderRadius: 6, flexShrink: 0,
+};
 
 function Composer() {
   const ctx = React.useContext(window.MonoCtx);
@@ -106,7 +111,7 @@ function Composer() {
   }, [payload, ctx.experiences, ctx.activeExp]);
 
   if (!payload) return null;
-  const key = `${payload.casId}-${payload.rid || (payload.sa && payload.sa.name) || "new"}`;
+  const key = `${payload.casId}-${payload.rid || "new"}`;
   return <ComposerInner key={key} payload={payload} exp={exp} ctx={ctx} />;
 }
 
@@ -114,27 +119,54 @@ function ComposerInner({ payload, exp, ctx }) {
   const casId        = payload.casId;
   const rid          = payload.rid || null;           // editing / placeholder-filling
   const date         = payload.date || null;
-  const existingText = payload.existingText || null;  // set → AI mode revises
-  const sa           = payload.sa || null;            // {name, question} → SA answer mode
+  const editExisting = payload.existingText || null;  // editing an existing journal
+  const isNew        = !rid && !editExisting;         // fresh composition → type selectable
   const expName      = (exp && (exp.name || `Experience ${exp.id}`)) || `Experience ${casId}`;
 
-  const [mode, setMode]       = React.useState(payload.mode || "write"); // "write" | "ai"
-  const [isFinal, setIsFinal] = React.useState(!!payload.isFinal);
-  const [text, setText]       = React.useState(payload.initialText || "");   // write tab
-  const [notes, setNotes]     = React.useState("");                           // ai tab
-  const [result, setResult]   = React.useState("");                           // pasted or generated
+  const [mode, setMode] = React.useState(payload.mode || "write"); // "write" | "ai"
+  const [kind, setKind] = React.useState("journal");  // "journal" | "final" | "sa" (isNew only)
+  const [text, setText]     = React.useState(payload.initialText || "");  // write tab
+  const [notes, setNotes]   = React.useState("");                          // ai tab
+  const [result, setResult] = React.useState("");                          // pasted or generated
   const { loading, error, run } = useAsyncOp();
+
+  // SA questions — loaded once when the SA type is first selected
+  const [saQs, setSaQs]     = React.useState(null);   // null = not loaded
+  const [saName, setSaName] = React.useState("");
+  const saQ = (saQs || []).find((q) => q.name === saName) || null;
+
+  React.useEffect(() => {
+    if (kind !== "sa" || saQs !== null) return;
+    run("Loading questions from ManageBac…", async () => {
+      const qs = await API.saQuestions(casId);
+      setSaQs(qs || []);
+      if (qs && qs.length) {
+        setSaName(qs[0].name);
+        setText(qs[0].answer || "");
+        setResult("");
+      }
+    }).catch(() => setSaQs([]));   // error shown via StatusLine
+  }, [kind, saQs, run, casId]);
+
+  function pickSA(name) {
+    setSaName(name);
+    const q = (saQs || []).find((x) => x.name === name);
+    setText((q && q.answer) || "");
+    setResult("");
+  }
 
   const aiProvider = (ctx.status && ctx.status.ai_provider) || "prompt";
   const isManual   = aiProvider === "prompt";
-  const aiKind     = existingText ? "edit" : (isFinal ? "final" : "reflection");
-  const includeHistory = isFinal && !existingText;
-  const canBuild   = sa ? true : (!!notes.trim() || (isFinal && !existingText));
+  const isSA       = isNew && kind === "sa";
+  const isFinal    = isNew && kind === "final";
+  const aiKind     = editExisting ? "edit" : (isFinal ? "final" : "reflection");
+  const canBuild   = isSA ? !!saQ : (isFinal || !!notes.trim());
 
   const title =
-    sa           ? `${sa.question} · ${expName}` :
-    existingText ? `Edit Journal · ${expName}` :
+    editExisting ? `Edit Journal · ${expName}` :
     rid          ? `Fill Placeholder · ${expName}${date ? ` · ${date}` : ""}` :
+    isSA         ? `Self-Assessment · ${expName}` :
+    isFinal      ? `Final Reflection · ${expName}` :
                    `New Journal · ${expName}`;
 
   // Copied by CopyBtn — the prompt itself is not displayed (nothing to edit
@@ -142,9 +174,9 @@ function ComposerInner({ payload, exp, ctx }) {
   async function buildPrompt() {
     let p;
     await run("Building prompt…", async () => {
-      const r = sa
-        ? await API.saPrompt(casId, sa.question, notes, existingText)
-        : await API.buildPrompt(casId, notes, aiKind, date, existingText, includeHistory);
+      const r = isSA
+        ? await API.saPrompt(casId, saQ.question, notes, saQ.answer || null)
+        : await API.buildPrompt(casId, notes, aiKind, date, editExisting, isFinal);
       p = r.prompt;
     });
     return p;
@@ -152,20 +184,19 @@ function ComposerInner({ payload, exp, ctx }) {
 
   async function generateDirect() {
     await run("Generating with AI…", async () => {
-      const r = sa
-        ? await API.saGenerate(casId, sa.question, notes, existingText)
-        : await API.generateAI(casId, notes, aiKind, date, existingText, includeHistory);
+      const r = isSA
+        ? await API.saGenerate(casId, saQ.question, notes, saQ.answer || null)
+        : await API.generateAI(casId, notes, aiKind, date, editExisting, isFinal);
       setResult(r.result || "");
     });
   }
 
   async function send(body) {
     if (!body || !body.trim()) return;
-    await run(rid || sa ? "Saving…" : "Posting…", async () => {
-      if (sa) {
+    await run("Saving…", async () => {
+      if (isSA) {
         // SA answers are plain text boxes — no <p> wrapping.
-        await API.saveSA(casId, sa.name, stripHtml(body).trim());
-        if (ctx.bumpSA) ctx.bumpSA();
+        await API.saveSA(casId, saName, stripHtml(body).trim());
       } else {
         const html = wrapPlainAsHtml(body);
         if (rid) {
@@ -180,7 +211,7 @@ function ComposerInner({ payload, exp, ctx }) {
   }
 
   const sendBody = mode === "write" ? text : result;
-  const previewHtml = !sa && mode === "ai" && result.trim() ? wrapPlainAsHtml(result) : "";
+  const previewHtml = !isSA && mode === "ai" && result.trim() ? wrapPlainAsHtml(result) : "";
 
   return (
     <div style={{
@@ -190,49 +221,37 @@ function ComposerInner({ payload, exp, ctx }) {
       maxHeight: "58%",
       display: "flex", flexDirection: "column",
     }}>
-      {/* Header — title, tabs, final toggle, close */}
+      {/* Header — title, type, tabs, close */}
       <div style={{
         display: "flex", alignItems: "center", gap: 10,
         padding: "9px 14px 8px",
       }}>
-        <I name={sa ? "inbox" : existingText ? "edit" : "pen"} size={13} stroke={1.8}
+        <I name={editExisting ? "edit" : "pen"} size={13} stroke={1.8}
            style={{ color: N.inkMid, flexShrink: 0 }} />
         <span title={title} style={{
           fontSize: 12, fontWeight: 500, color: N.inkDeep,
           whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
         }}>{title}</span>
 
-        <div style={{
-          display: "inline-flex", gap: 2, padding: 2,
-          background: "rgba(0,0,0,0.05)", borderRadius: 6, flexShrink: 0,
-        }}>
+        {isNew && (
+          <div style={segStyle}>
+            <TabBtn active={kind === "journal"} onClick={() => setKind("journal")}>Journal</TabBtn>
+            <TabBtn active={kind === "final"}   onClick={() => setKind("final")}>Final</TabBtn>
+            <TabBtn active={kind === "sa"}      onClick={() => setKind("sa")}>SA</TabBtn>
+          </div>
+        )}
+
+        <div style={segStyle}>
           <TabBtn active={mode === "write"} icon="pen" onClick={() => setMode("write")}>Write</TabBtn>
           <TabBtn active={mode === "ai"} icon="sparkle" onClick={() => setMode("ai")}>AI</TabBtn>
         </div>
-
-        {mode === "ai" && !existingText && !sa && (
-          <label style={{
-            display: "inline-flex", alignItems: "center", gap: 5,
-            fontSize: 11, fontWeight: 500, color: isFinal ? N.inkDeep : N.inkMid,
-            padding: "3px 9px", borderRadius: 5, cursor: "pointer",
-            whiteSpace: "nowrap", flexShrink: 0,
-            background: isFinal ? "rgba(177,226,69,0.28)" : "rgba(0,0,0,0.04)",
-            boxShadow: isFinal ? `inset 0 0 0 1px ${A.solid}` : "none",
-            transition: "background 0.12s",
-          }}>
-            <input type="checkbox" checked={isFinal}
-                   onChange={(e) => setIsFinal(e.target.checked)}
-                   style={{ width: 12, height: 12, margin: 0, cursor: "pointer" }} />
-            Final Reflection
-          </label>
-        )}
 
         <div style={{ flex: 1 }} />
         <button onClick={ctx.closeComposer} className="mono-close" title="Close composer" style={{
           width: 20, height: 20, borderRadius: "50%", border: "none",
           background: "rgba(0,0,0,0.06)", color: "rgba(20,20,20,0.65)",
           display: "flex", alignItems: "center", justifyContent: "center",
-          cursor: "pointer", fontFamily: "inherit",
+          cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
         }}>
           <I name="close" size={10} stroke={2} />
         </button>
@@ -240,12 +259,37 @@ function ComposerInner({ payload, exp, ctx }) {
 
       {/* Body */}
       <div style={{ padding: "0 14px", overflow: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
+        {/* SA — pick which question is being answered */}
+        {isSA && saQs && saQs.length > 0 && (
+          <select
+            value={saName}
+            onChange={(e) => pickSA(e.target.value)}
+            style={{
+              width: "100%", padding: "6px 9px",
+              fontSize: 12, color: N.inkDeep, fontFamily: "inherit",
+              background: "#fff", borderRadius: 5,
+              border: "1px solid rgba(0,0,0,0.12)", outline: "none",
+            }}>
+            {saQs.map((q) => (
+              <option key={q.name} value={q.name}>
+                {(q.answer || "").trim() ? "● " : "○ "}
+                {q.question.length > 120 ? q.question.slice(0, 120) + "…" : q.question}
+              </option>
+            ))}
+          </select>
+        )}
+        {isSA && saQs && !saQs.length && !loading && (
+          <div style={{ fontSize: 11.5, color: N.inkSoft, padding: "2px 0" }}>
+            No Self-Assessment questions on this experience.
+          </div>
+        )}
+
         {mode === "write" ? (
           <div style={boxStyle}>
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder={sa ? "Write your answer here…" : "Write your reflection here…"}
+              placeholder={isSA ? "Write your answer here…" : "Write your reflection here…"}
               style={taStyle(150)}
             />
           </div>
@@ -255,18 +299,18 @@ function ComposerInner({ payload, exp, ctx }) {
                 copied, not displayed: there is nothing to edit in it. */}
             <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
               <FieldLabel>
-                {existingText && !sa ? "Changes / instructions" :
-                 isFinal            ? "Themes to emphasize" : "Your notes"}
+                {editExisting ? "Changes / instructions" :
+                 isFinal      ? "Themes to emphasize" : "Your notes"}
               </FieldLabel>
               <div style={{ ...boxStyle, flex: 1 }}>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder={
-                    sa                   ? "Optional — what to emphasize in the answer" :
-                    existingText         ? "e.g. tighten the second paragraph, emphasize teamwork more" :
-                    isFinal              ? "e.g. focus on perseverance and LO5 (collaboration)" :
-                                           "e.g. practiced chord transitions, learned G→D switch, 45 min"
+                    isSA         ? "Optional — what to emphasize in the answer" :
+                    editExisting ? "e.g. tighten the second paragraph, emphasize teamwork more" :
+                    isFinal      ? "e.g. focus on perseverance and LO5 (collaboration)" :
+                                   "e.g. practiced chord transitions, learned G→D switch, 45 min"
                   }
                   style={taStyle(110)}
                 />
@@ -312,7 +356,8 @@ function ComposerInner({ payload, exp, ctx }) {
           </div>
         )}
 
-        {existingText && mode === "ai" && (
+        {/* Current text being revised (journal edit) or current SA answer */}
+        {mode === "ai" && (editExisting || (isSA && saQ && (saQ.answer || "").trim())) && (
           <div style={{
             padding: "6px 10px", borderRadius: 5,
             background: "rgba(0,0,0,0.025)",
@@ -320,7 +365,7 @@ function ComposerInner({ payload, exp, ctx }) {
             fontSize: 11, lineHeight: 1.5, color: N.inkMid,
             maxHeight: 60, overflow: "auto", whiteSpace: "pre-wrap",
           }}>
-            <b style={{ color: N.ink }}>Existing:</b> {existingText}
+            <b style={{ color: N.ink }}>Current:</b> {editExisting || saQ.answer}
           </div>
         )}
       </div>
@@ -334,8 +379,8 @@ function ComposerInner({ payload, exp, ctx }) {
         <div style={{ flex: 1 }} />
         <Btn onClick={ctx.closeComposer} disabled={!!loading}>Cancel</Btn>
         <Btn primary onClick={() => send(sendBody)}
-             disabled={!!loading || !sendBody.trim()}>
-          {rid && !payload.isPlaceholderFill ? "Save to ManageBac" : "Send to ManageBac"}
+             disabled={!!loading || !sendBody.trim() || (isSA && !saQ)}>
+          {isSA ? "Save answer" : rid && !payload.isPlaceholderFill ? "Save to ManageBac" : "Send to ManageBac"}
         </Btn>
       </div>
     </div>
