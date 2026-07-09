@@ -206,6 +206,12 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/favicon.ico")
+def favicon():
+    # No favicon shipped — return 204 so browser requests don't 500 the log.
+    return "", 204
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # ── API: system ───────────────────────────────────────────────────────────────
 # ══════════════════════════════════════════════════════════════════════════════

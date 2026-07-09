@@ -312,6 +312,8 @@ const _TOOLBAR_BTN_STYLE = {
 };
 
 function TopRightToolbar({ dotKind, pendingCount, onOpenPlaceholders, onOpenSettings }) {
+  const ctx = React.useContext(window.MonoCtx);
+  const hubOpen = !!ctx.hubOpen;
   const dotColor =
     dotKind === "green"  ? "#b1e245" :
     dotKind === "yellow" ? "#e7c64a" : "#d8504a";
@@ -345,9 +347,16 @@ function TopRightToolbar({ dotKind, pendingCount, onOpenPlaceholders, onOpenSett
         {dotLabel}
       </span>
       <button
-        title={`Placeholders${pendingCount ? ` · ${pendingCount} pending` : ""}`}
+        title={`Placeholders${pendingCount ? ` · ${pendingCount} pending` : ""} — ${hubOpen ? "hide" : "show"} panel`}
         onClick={onOpenPlaceholders}
-        style={{ ..._TOOLBAR_BTN_STYLE, position: "relative" }}>
+        style={{
+          ..._TOOLBAR_BTN_STYLE, position: "relative",
+          ...(hubOpen ? {
+            background: "rgba(255,255,255,0.95)",
+            color: "rgba(20,20,20,0.85)",
+            boxShadow: "inset 0 0 0 1px rgba(20,20,20,0.35)",
+          } : {}),
+        }}>
         <I name="tray" size={15} stroke={1.7} />
         {pendingCount > 0 ? (
           <span style={{
@@ -722,6 +731,8 @@ function AppShell(props) {
             onDeleteRefl={onDeleteRefl}
             appState={props.appState}
           />
+          {/* Placeholder Hub — collapsible side panel instead of a modal */}
+          {ctx.hubOpen && <window.MonoPlaceholderPanel />}
         </div>
       </GradientBg>
     </div>);
