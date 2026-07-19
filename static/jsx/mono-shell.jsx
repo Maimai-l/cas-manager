@@ -7,26 +7,19 @@ const A = window.MONO_ACCENT;
 const N = window.MONO_NEUTRALS;
 const S = window.MONO_STRAND;
 
-// Warm neutral palette — a paper-white system, not cold gray. Borders and
-// fills carry a faint warm tint so the flat surfaces read alive, not ashen.
+// Light, faintly-warm paper system — solid fills everywhere (no
+// translucency), just a hair off pure white so the side columns read light
+// and clean rather than dead gray.
 const BG = {
-  sidebar: "#f3f1ec",   // warm paper
-  bar:     "#f8f6f1",   // toolbars / docks / footers
-  main:    "#fffefc",   // content
-  hover:   "rgba(60,48,30,0.05)",
-  active:  "rgba(60,48,30,0.09)",
+  sidebar: "#f7f6f3",   // side columns — barely-warm off-white
+  bar:     "#fbfaf8",   // toolbars / docks / footers
+  main:    "#ffffff",   // content
+  hover:   "rgba(50,42,28,0.045)",
+  active:  "rgba(50,42,28,0.08)",
 };
-const SEP = "1px solid rgba(60,48,30,0.13)";   // warm hairline separator
+const SEP = "1px solid rgba(50,42,28,0.11)";   // soft warm hairline
 const R   = 5;                                  // control corner radius
-// Frosted side surfaces — translucent warm paper with a soft blur, so the
-// rails read like frosted glass rather than a dead gray fill.
-const FROST = {
-  background: "rgba(240,238,231,0.66)",
-  backdropFilter: "blur(30px) saturate(150%)",
-  WebkitBackdropFilter: "blur(30px) saturate(150%)",
-};
 window.MONO_BG = BG;
-window.MONO_FROST = FROST;
 
 // Pull the experience's strand list as a canonical-order array of valid keys.
 // Falls back to ["activity"] if nothing usable is present so the existing
@@ -228,7 +221,7 @@ function Sidebar({ experiences, activeId, onSelect, syncState }) {
   return (
     <div style={{
       width: 230, flexShrink: 0,
-      ...FROST,
+      background: BG.sidebar,
       borderRight: SEP,
       display: "flex", flexDirection: "column", overflow: "hidden"
     }}>
