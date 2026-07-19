@@ -379,7 +379,7 @@ function Toolbar({ dotKind, onOpenSettings, children }) {
 // ── Main panel ──────────────────────────────────────────────────────────
 function MainPanel({
   activeExp, reflections, reflLoading,
-  onOpenJournal, onOpenPhotos, onEditRefl, onSyncOne,
+  onOpenJournal, onEditRefl, onSyncOne,
   onOpenSettings, onOpenPlaceholders, pendingCount,
   dangerZone, onDeleteRefl, appState, dotKind
 }) {
@@ -426,10 +426,7 @@ function MainPanel({
             Completed · read-only
           </Pill>
         ) : (
-          <React.Fragment>
-            <Btn icon="pen"   onClick={onOpenJournal}>+ New Entry</Btn>
-            <Btn icon="image" onClick={onOpenPhotos}>+ New Photo</Btn>
-          </React.Fragment>
+          <Btn icon="pen" onClick={onOpenJournal}>+ New Entry</Btn>
         )}
       </Toolbar>
 
@@ -638,7 +635,6 @@ function AppShell(props) {
         reflections={props.reflections}
         reflLoading={props.reflLoading}
         onOpenJournal={props.onOpenJournal}
-        onOpenPhotos={props.onOpenPhotos}
         onEditRefl={props.onEditRefl}
         onSyncOne={ctx.syncOne}
         onOpenSettings={props.onOpenSettings}
