@@ -317,6 +317,13 @@ def api_reflections(cas_id: int):
 # ── API: sync ─────────────────────────────────────────────────────────────────
 # ══════════════════════════════════════════════════════════════════════════════
 
+@app.route("/api/sync/experiences", methods=["POST"])
+def api_sync_experiences():
+    """Fast path: fetch + cache just the experience LIST (no reflections),
+    so the sidebar can populate immediately after login."""
+    return _ok(ctrl.ctrl_fetch_experiences_from_web())
+
+
 @app.route("/api/sync/all", methods=["POST"])
 def api_sync_all():
     return _ok(ctrl.ctrl_sync_all(include_completed=True))

@@ -338,10 +338,13 @@ const _TOOLBAR_BTN_STYLE = {
 };
 
 function Toolbar({ dotKind, onOpenSettings, children }) {
+  const ctx = React.useContext(window.MonoCtx);
+  const syncing = ctx.syncState === "syncing";
   const dotColor =
     dotKind === "green"  ? "#8bc34a" :
     dotKind === "yellow" ? "#e7c64a" : "#d8504a";
   const dotLabel =
+    syncing              ? "Syncing…" :
     dotKind === "green"  ? "Online" :
     dotKind === "yellow" ? "Syncing" : "Offline";
   return (
@@ -354,18 +357,24 @@ function Toolbar({ dotKind, onOpenSettings, children }) {
       borderBottom: SEP,
       background: BG.bar,
     }}>
-      <span
-        title={`Status: ${dotLabel}`}
+      <button
+        className="mono-tray"
+        onClick={() => { if (!syncing && ctx.bootSync) ctx.bootSync(); }}
+        disabled={syncing}
+        title={syncing ? "Syncing…" : "Click to re-sync from ManageBac"}
         style={{
           display: "inline-flex", alignItems: "center", gap: 6,
+          height: 26, padding: "0 9px", borderRadius: R,
+          border: "none", background: "transparent",
           fontSize: 11, color: N.inkMid, flexShrink: 0,
+          cursor: syncing ? "default" : "pointer", fontFamily: "inherit",
         }}>
         <span style={{
           width: 8, height: 8, borderRadius: "50%",
           background: dotColor,
         }} />
         {dotLabel}
-      </span>
+      </button>
       <div style={{ flex: 1 }} />
       {children}
       <button
