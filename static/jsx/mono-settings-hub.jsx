@@ -163,9 +163,7 @@ function LoginForm({ onCancel }) {
       boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
       display: "flex", flexDirection: "column", gap: 10
     }}>
-      <FieldLabel hint="In the form of https://<school>.managebac.cn / .com / .org">
-       School ManageBac URL
-      </FieldLabel>
+      <FieldLabel>School URL</FieldLabel>
       <FieldShell style={{ padding: 0 }}>
         <input
           type="url"
@@ -211,9 +209,6 @@ function LoginForm({ onCancel }) {
         <Btn primary onClick={doLogin} disabled={loading}>
           {loading ? "Logging in…" : "Log in"}
         </Btn>
-      </div>
-      <div style={{ fontSize: 10.5, color: N.inkSoft, lineHeight: 1.5, marginTop: 4 }}>
-        Stored locally so the app can re-login on its own — kept on this computer only.
       </div>
     </div>);
 }
@@ -268,7 +263,7 @@ function AIProviderPane() {
       </div>
 
       <div>
-        <FieldLabel hint="for Ollama">Ollama model · URL</FieldLabel>
+        <FieldLabel>Ollama model · URL</FieldLabel>
         <div style={{ display: "flex", gap: 8 }}>
           <FieldShell mono style={{ padding: 0, flex: 1 }}>
             <input
@@ -327,12 +322,7 @@ function PromptsPane() {
 
   return (
     <>
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep }}>System prompts</div>
-        <div style={{ fontSize: 11, color: N.inkMid, lineHeight: 1.55, marginTop: 3 }}>
-          Click one to edit. The experience's proposal and LOs are appended automatically.
-        </div>
-      </div>
+      <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep }}>System prompts</div>
 
       {loading && <div style={{ fontSize: 11.5, color: N.inkMid }}>Loading…</div>}
       {error  && <div style={{ fontSize: 11.5, color: "#a4332e" }}>⚠ {error}</div>}
@@ -496,7 +486,7 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
                 boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)",
                 cursor: "pointer", fontFamily: "inherit"
               }}>
-              Copy default → editor
+              Copy default
             </button>
           </div>
 
@@ -604,7 +594,7 @@ function GeneralPane() {
     <>
       <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep }}>General</div>
       <div>
-        <FieldLabel hint="switch school">School URL</FieldLabel>
+        <FieldLabel>School URL</FieldLabel>
         <FieldShell mono style={{ padding: 0 }}>
           <input
             // key forces re-mount when cfg.base updates from a successful login,

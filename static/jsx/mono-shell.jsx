@@ -398,9 +398,9 @@ function MainPanel({
         <Toolbar dotKind={dotKind} onOpenSettings={onOpenSettings} />
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ textAlign: "center", maxWidth: 360, color: N.inkMid, padding: 24 }}>
-            <div style={{ fontSize: 15, fontWeight: 500, color: N.inkDeep, marginBottom: 6 }}>Not logged into ManageBac</div>
+            <div style={{ fontSize: 15, fontWeight: 500, color: N.inkDeep, marginBottom: 6 }}>Not logged in</div>
             <div style={{ fontSize: 12, lineHeight: 1.55 }}>
-              Open Settings (⚙ top right) → Account, enter your ManageBac credentials, and your data will sync.
+              Log in from Settings to sync your experiences.
             </div>
           </div>
         </div>
