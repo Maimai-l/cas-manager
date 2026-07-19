@@ -12,17 +12,34 @@ const StrandTag = window.MonoStrandTag;
 const API = window.API;
 const HUB_SEP = window.MONO_SEP || "1px solid rgba(0,0,0,0.10)";
 
-// ── Settings ───────────────────────────────────────────────────────────
+// ── Settings — full-page inline panel (not a floating modal) ────────────
 function SettingsModal({ tab = "account", onTab }) {
   const ctx = React.useContext(window.MonoCtx);
+  const BG = window.MONO_BG;
   return (
-    <ModalShell title="Settings" width={720}
-      footer={<><Btn onClick={ctx.close}>Done</Btn></>}
-      bodyStyle={{ padding: 0 }}>
-      <div style={{ display: "flex", height: 480, marginTop: -4 }}>
+    <div className="mono-fade" style={{
+      position: "absolute", inset: 0, zIndex: 40,
+      background: BG.main,
+      display: "flex", flexDirection: "column",
+    }}>
+      {/* 42px header — matches the app toolbars */}
+      <div style={{
+        height: 42, flexShrink: 0, boxSizing: "border-box",
+        padding: "0 14px", borderBottom: HUB_SEP,
+        display: "flex", alignItems: "center", gap: 8,
+        background: BG.bar,
+      }}>
+        <I name="settings" size={14} stroke={1.7} style={{ color: N.inkMid }} />
+        <span style={{ fontSize: 12.5, fontWeight: 500, color: N.inkDeep }}>Settings</span>
+        <div style={{ flex: 1 }} />
+        <Btn primary onClick={ctx.close}>Done</Btn>
+      </div>
+
+      {/* tab column + pane */}
+      <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
         <div style={{
-          width: 160, padding: "14px 8px",
-          background: "#f4f4f3",
+          width: 168, flexShrink: 0, padding: "12px 8px",
+          background: BG.sidebar,
           borderRight: HUB_SEP,
           display: "flex", flexDirection: "column", gap: 2
         }}>
@@ -34,7 +51,8 @@ function SettingsModal({ tab = "account", onTab }) {
         </div>
 
         <div key={tab} className="mono-fade"
-             style={{ flex: 1, padding: "18px 22px", display: "flex", flexDirection: "column", gap: 18, overflow: "auto" }}>
+             style={{ flex: 1, padding: "20px 26px", display: "flex", flexDirection: "column",
+                      gap: 18, overflow: "auto", maxWidth: 720 }}>
           {tab === "account" && <AccountPane />}
           {tab === "ai"      && <AIProviderPane />}
           {tab === "prompts" && <PromptsPane />}
@@ -42,7 +60,7 @@ function SettingsModal({ tab = "account", onTab }) {
           {tab === "danger"  && <DangerPane />}
         </div>
       </div>
-    </ModalShell>);
+    </div>);
 }
 
 function SettingsTab({ icon, label, active, onClick }) {

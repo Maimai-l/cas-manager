@@ -1,13 +1,16 @@
-// ── Composer — flat, non-modal workbench for journal / final / SA ───────
-// One panel docked at the bottom of the main panel. Type selector picks
-// what gets written: a session journal, the Final Reflection, or one of
-// the experience's Self-Assessment answers (the ManageBac Answers tab).
+// ── Composer — flat, non-modal workbench for journal / final / SA / photos ─
+// One panel docked at the bottom of the main panel. The type selector picks
+// what gets created: a session journal, the Final Reflection, a Self-
+// Assessment answer, or a photo album. This is the app's single creation
+// surface — there are no more floating photo dialogs.
 const I = window.I;
 const A = window.MONO_ACCENT;
 const N = window.MONO_NEUTRALS;
 const Btn = window.MonoBtn;
 const FieldLabel = window.MonoFieldLabel;
-const { StatusLine, useAsyncOp, wrapPlainAsHtml, stripHtml } = window.MonoHelpers;
+const PhotoThumb = window.MonoPhotoThumb;
+const { StatusLine, useAsyncOp, wrapPlainAsHtml, stripHtml,
+        Dropzone, DeleteChip } = window.MonoHelpers;
 const API = window.API;
 
 // Clipboard with fallback — navigator.clipboard can fail inside pywebview,
@@ -124,7 +127,7 @@ function ComposerInner({ payload, exp, ctx }) {
   const expName      = (exp && (exp.name || `Experience ${exp.id}`)) || `Experience ${casId}`;
 
   const [mode, setMode] = React.useState(payload.mode || "write"); // "write" | "ai"
-  const [kind, setKind] = React.useState("journal");  // "journal" | "final" | "sa" (isNew only)
+  const [kind, setKind] = React.useState(payload.kind || "journal");  // journal|final|sa|photos
   const [text, setText]     = React.useState(payload.initialText || "");  // write tab
   const [notes, setNotes]   = React.useState("");                          // ai tab
   const [result, setResult] = React.useState("");                          // pasted or generated
@@ -157,12 +160,14 @@ function ComposerInner({ payload, exp, ctx }) {
 
   const aiProvider = (ctx.status && ctx.status.ai_provider) || "prompt";
   const isManual   = aiProvider === "prompt";
-  const isSA       = isNew && kind === "sa";
+  const isPhotos   = kind === "photos";
+  const isSA       = kind === "sa";
   const isFinal    = isNew && kind === "final";
   const aiKind     = editExisting ? "edit" : (isFinal ? "final" : "reflection");
   const canBuild   = isSA ? !!saQ : (isFinal || !!notes.trim());
 
   const title =
+    isPhotos     ? `${rid ? "Edit" : "New"} Photos · ${expName}` :
     editExisting ? `Edit Journal · ${expName}` :
     rid          ? `Fill Placeholder · ${expName}${date ? ` · ${date}` : ""}` :
     isSA         ? `Self-Assessment · ${expName}` :
@@ -226,7 +231,7 @@ function ComposerInner({ payload, exp, ctx }) {
         display: "flex", alignItems: "center", gap: 10,
         padding: "9px 14px 8px",
       }}>
-        <I name={editExisting ? "edit" : "pen"} size={13} stroke={1.8}
+        <I name={isPhotos ? "image" : editExisting ? "edit" : "pen"} size={13} stroke={1.8}
            style={{ color: N.inkMid, flexShrink: 0 }} />
         <span title={title} style={{
           fontSize: 12, fontWeight: 500, color: N.inkDeep,
@@ -238,13 +243,16 @@ function ComposerInner({ payload, exp, ctx }) {
             <TabBtn active={kind === "journal"} onClick={() => setKind("journal")}>Journal</TabBtn>
             <TabBtn active={kind === "final"}   onClick={() => setKind("final")}>Final</TabBtn>
             <TabBtn active={kind === "sa"}      onClick={() => setKind("sa")}>SA</TabBtn>
+            <TabBtn active={kind === "photos"}  onClick={() => setKind("photos")}>Photos</TabBtn>
           </div>
         )}
 
-        <div style={segStyle}>
-          <TabBtn active={mode === "write"} icon="pen" onClick={() => setMode("write")}>Write</TabBtn>
-          <TabBtn active={mode === "ai"} icon="sparkle" onClick={() => setMode("ai")}>AI</TabBtn>
-        </div>
+        {!isPhotos && (
+          <div style={segStyle}>
+            <TabBtn active={mode === "write"} icon="pen" onClick={() => setMode("write")}>Write</TabBtn>
+            <TabBtn active={mode === "ai"} icon="sparkle" onClick={() => setMode("ai")}>AI</TabBtn>
+          </div>
+        )}
 
         <div style={{ flex: 1 }} />
         <button onClick={ctx.closeComposer} className="mono-close" title="Close composer" style={{
@@ -257,6 +265,10 @@ function ComposerInner({ payload, exp, ctx }) {
         </button>
       </div>
 
+      {isPhotos ? (
+        <PhotosPane key={`photos-${rid || "new"}`} casId={casId} rid={rid} ctx={ctx} />
+      ) : (
+      <React.Fragment>
       {/* Body — keyed so tab/type switches fade in (state lives above, so
           nothing is lost on the DOM swap) */}
       <div key={`${mode}-${kind}`} className="mono-fade"
@@ -385,7 +397,126 @@ function ComposerInner({ payload, exp, ctx }) {
           {isSA ? "Save answer" : rid && !payload.isPlaceholderFill ? "Save to ManageBac" : "Send to ManageBac"}
         </Btn>
       </div>
+      </React.Fragment>
+      )}
     </div>
+  );
+}
+
+// ── Photos type — new album or edit an existing one, all in the dock ────
+function PhotosPane({ casId, rid, ctx }) {
+  const editing = !!rid;
+  const [existing, setExisting]   = React.useState(editing ? null : []); // null=loading
+  const [caption, setCaption]     = React.useState("");
+  const [files, setFiles]         = React.useState([]);   // new File[]
+  const [dragging, setDragging]   = React.useState(false);
+  const fileRef = React.useRef(null);
+  const { loading, error, run } = useAsyncOp();
+
+  const reload = React.useCallback(async () => {
+    if (!editing) return;
+    await run("Loading photos…", async () => {
+      const ps = await API.albumPhotos(rid, casId);
+      setExisting(ps || []);
+    });
+  }, [editing, rid, casId, run]);
+  React.useEffect(() => { reload(); }, [reload]);
+
+  function addFiles(fs) {
+    const imgs = Array.from(fs || []).filter((f) => f.type && f.type.startsWith("image/"));
+    if (imgs.length) setFiles((prev) => [...prev, ...imgs]);
+  }
+  const totalMB = (files.reduce((a, f) => a + (f.size || 0), 0) / 1048576).toFixed(1) + " MB";
+
+  async function deleteExisting(pid) {
+    if (!window.confirm("Delete this photo from ManageBac?")) return;
+    await run("Deleting…", async () => {
+      await API.deletePhoto(rid, pid, casId);
+      await reload();
+      await ctx.refreshAfterMutation();
+    });
+  }
+
+  async function submit() {
+    if (!files.length) return;
+    await run(`Uploading ${files.length} photo${files.length > 1 ? "s" : ""}…`, async () => {
+      if (editing) {
+        await API.addPhotos(rid, casId, files, caption);
+      } else {
+        await API.createAlbum(casId, files, files.map(() => caption), null, null);
+      }
+      await ctx.refreshAfterMutation();
+      ctx.closeComposer();
+    });
+  }
+
+  return (
+    <React.Fragment>
+      <div className="mono-fade" style={{ padding: "0 14px", overflow: "auto",
+             display: "flex", flexDirection: "column", gap: 8 }}>
+        {editing && (
+          <div>
+            <FieldLabel hint={existing ? `${existing.length} photo${existing.length === 1 ? "" : "s"}` : ""}>
+              Existing photos
+            </FieldLabel>
+            <div style={{
+              padding: 10, background: "#fff", borderRadius: 5,
+              boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)",
+              minHeight: 40,
+            }}>
+              {!existing && <div style={{ fontSize: 11, color: N.inkSoft }}>Loading…</div>}
+              {existing && !existing.length && <div style={{ fontSize: 11, color: N.inkSoft }}>No photos in this album.</div>}
+              {existing && !!existing.length && (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {existing.map((p) => (
+                    <div key={p.id} style={{ position: "relative" }}>
+                      <PhotoThumb url={p.s3_url} caption={p.caption} w={84} h={62} />
+                      <DeleteChip onClick={() => deleteExisting(p.id)} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="mono-field" style={{
+          background: "#fff", borderRadius: 5,
+          boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)",
+        }}>
+          <input
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+            placeholder={editing ? "Caption for new photos (optional)" : "Caption applied to every photo (optional)"}
+            style={{ width: "100%", padding: "8px 11px", border: "none", outline: "none",
+                     background: "transparent", fontSize: 12.5, color: N.inkDeep, fontFamily: "inherit" }}
+          />
+        </div>
+
+        <Dropzone
+          files={files}
+          dragging={dragging}
+          totalSize={totalMB}
+          onPick={() => fileRef.current && fileRef.current.click()}
+          onDragOver={(e) => { e.preventDefault(); if (!dragging) setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files); }}
+          onRemove={(i) => setFiles((prev) => prev.filter((_, j) => j !== i))}
+        />
+        <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: "none" }}
+          onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
+      </div>
+
+      {/* Footer */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px 10px" }}>
+        <StatusLine loading={loading} error={error} />
+        <div style={{ flex: 1 }} />
+        <Btn onClick={ctx.closeComposer} disabled={!!loading}>{editing ? "Done" : "Cancel"}</Btn>
+        <Btn primary onClick={submit} disabled={!!loading || !files.length}>
+          {files.length ? `${editing ? "Add" : "Upload"} ${files.length}` : (editing ? "Add" : "Upload")}
+        </Btn>
+      </div>
+    </React.Fragment>
   );
 }
 

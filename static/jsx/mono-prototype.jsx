@@ -5,9 +5,9 @@ const AppShell = window.MonoAppShell;
 const API = window.API;
 
 function Prototype() {
-  // modal target: null | "photos-new" | "photos-edit" | "settings"
-  // (Journal + AI flows live in the flat Composer panel at the bottom of the
-  //  main panel; the Placeholder Hub is a collapsible right side panel.)
+  // modal target: null | "settings" (a full-page inline panel).
+  // All creation — journal / final / SA / photos — lives in the bottom
+  // Composer; the Placeholder Hub is a collapsible right side panel.
   const [modal, setModal] = React.useState(null);
   const [activeId, setActiveId] = React.useState(null);
   const [settingsTab, setSettingsTab] = React.useState("account");
@@ -242,10 +242,10 @@ function Prototype() {
     loadReflections, loadExperiences, loadQueue, loadStatus,
   };
 
-  let modalEl = null;
-  if      (modal === "photos-new")     modalEl = <window.NewPhotosModal_Mono />;
-  else if (modal === "photos-edit")    modalEl = <window.EditPhotosModal_Mono />;
-  else if (modal === "settings")       modalEl = <window.SettingsModal_Mono tab={settingsTab} onTab={setSettingsTab} />;
+  // Settings is a full-page inline panel now (not a floating modal).
+  const settingsEl = modal === "settings"
+    ? <window.SettingsModal_Mono tab={settingsTab} onTab={setSettingsTab} />
+    : null;
 
   return (
     <MonoCtx.Provider value={ctxValue}>
@@ -265,13 +265,11 @@ function Prototype() {
           appState={appState}
           onSelect={setActiveId}
           onOpenJournal={() => openComposer({ mode: "write", casId: activeId })}
-          onOpenPhotos={() => setModal("photos-new")}
           onOpenSettings={() => setModal("settings")}
           onOpenPlaceholders={toggleHub}
           onEditRefl={(r) => {
             if (r.kind === "album") {
-              setModalPayload({ rid: r.id, casId: activeId, refl: r });
-              setModal("photos-edit");
+              openComposer({ kind: "photos", casId: activeId, rid: r.id });
             } else {
               const plain = r.body_text || "";
               openComposer({
@@ -282,7 +280,7 @@ function Prototype() {
             }
           }}
         />
-        {modalEl}
+        {settingsEl}
       </div>
     </MonoCtx.Provider>
   );
