@@ -530,10 +530,14 @@ function RowBtn({ icon, label, onClick, danger, title, width = 62 }) {
 
 function ReflRow({ refl, casId, onEdit, dangerZone, onDelete, onPhotoError }) {
   const isAlbum  = refl.kind === "album";
+  const isFile   = refl.kind === "file";
   const photos   = refl.photo_list || [];
+  const files    = refl.file_list || [];
   const dateStr  = refl.date_iso || refl.group_date || "";
   const subline  = isAlbum
     ? `Photos · ${photos.length}`
+    : isFile
+    ? (files.length > 1 ? `Files · ${files.length}` : "File")
     : (refl.kind === "journal" ? "Journal entry" : (refl.kind || "entry"));
   const editable = refl.kind === "journal" || refl.kind === "album";
   const copyable = !isAlbum && !!(refl.body_text || refl.body_html);
@@ -561,7 +565,7 @@ function ReflRow({ refl, casId, onEdit, dangerZone, onDelete, onPhotoError }) {
         }} />
       ) : null}
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 22px 6px" }}>
-        <I name={isAlbum ? "image" : "pen"} size={13} stroke={1.6}
+        <I name={isAlbum ? "image" : isFile ? "file" : "pen"} size={13} stroke={1.6}
            style={{ color: N.inkSoft, flexShrink: 0 }} />
         <span className="tnum" style={{ fontSize: 12, fontWeight: 500, color: N.inkDeep, flexShrink: 0 }}>
           {dateStr || "—"}
@@ -599,6 +603,22 @@ function ReflRow({ refl, casId, onEdit, dangerZone, onDelete, onPhotoError }) {
         ) : (
           <div style={{ padding: "0 22px 10px", fontSize: 11.5, color: N.inkSoft, fontStyle: "italic" }}>
             (empty album — try Sync)
+          </div>
+        )
+      ) : isFile ? (
+        files.length ? (
+          <div style={{ padding: "2px 22px 12px", display: "flex", flexDirection: "column", gap: 5 }}>
+            {files.map((f, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <I name="file" size={13} stroke={1.6} style={{ color: N.inkSoft, flexShrink: 0 }} />
+                <span style={{ fontSize: 12.5, fontWeight: 500, color: N.inkDeep }}>{f.name}</span>
+                {f.size ? <span style={{ fontSize: 11, color: N.inkSoft }}>{f.size}</span> : null}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ padding: "0 22px 10px", fontSize: 11.5, color: N.inkSoft, fontStyle: "italic" }}>
+            (file attachment)
           </div>
         )
       ) : (

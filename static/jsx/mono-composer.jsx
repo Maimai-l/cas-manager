@@ -161,12 +161,14 @@ function ComposerInner({ payload, exp, ctx }) {
   const aiProvider = (ctx.status && ctx.status.ai_provider) || "prompt";
   const isManual   = aiProvider === "prompt";
   const isPhotos   = kind === "photos";
+  const isFile     = kind === "file";
   const isSA       = kind === "sa";
   const isFinal    = isNew && kind === "final";
   const aiKind     = editExisting ? "edit" : (isFinal ? "final" : "reflection");
   const canBuild   = isSA ? !!saQ : (isFinal || !!notes.trim());
 
   const title =
+    isFile       ? `New File · ${expName}` :
     isPhotos     ? `${rid ? "Edit" : "New"} Photos · ${expName}` :
     editExisting ? `Edit Journal · ${expName}` :
     rid          ? `Fill Placeholder · ${expName}${date ? ` · ${date}` : ""}` :
@@ -231,7 +233,7 @@ function ComposerInner({ payload, exp, ctx }) {
         display: "flex", alignItems: "center", gap: 10,
         padding: "9px 14px 8px",
       }}>
-        <I name={isPhotos ? "image" : editExisting ? "edit" : "pen"} size={13} stroke={1.8}
+        <I name={isFile ? "file" : isPhotos ? "image" : editExisting ? "edit" : "pen"} size={13} stroke={1.8}
            style={{ color: N.inkMid, flexShrink: 0 }} />
         <span title={title} style={{
           fontSize: 12, fontWeight: 500, color: N.inkDeep,
@@ -244,10 +246,11 @@ function ComposerInner({ payload, exp, ctx }) {
             <TabBtn active={kind === "final"}   onClick={() => setKind("final")}>Final</TabBtn>
             <TabBtn active={kind === "sa"}      onClick={() => setKind("sa")}>SA</TabBtn>
             <TabBtn active={kind === "photos"}  onClick={() => setKind("photos")}>Photos</TabBtn>
+            <TabBtn active={kind === "file"}    onClick={() => setKind("file")}>Files</TabBtn>
           </div>
         )}
 
-        {!isPhotos && (
+        {!isPhotos && !isFile && (
           <div style={segStyle}>
             <TabBtn active={mode === "write"} icon="pen" onClick={() => setMode("write")}>Write</TabBtn>
             <TabBtn active={mode === "ai"} icon="sparkle" onClick={() => setMode("ai")}>AI</TabBtn>
@@ -267,6 +270,8 @@ function ComposerInner({ payload, exp, ctx }) {
 
       {isPhotos ? (
         <PhotosPane key={`photos-${rid || "new"}`} casId={casId} rid={rid} ctx={ctx} />
+      ) : isFile ? (
+        <FilesPane key="files-new" casId={casId} ctx={ctx} />
       ) : (
       <React.Fragment>
       {/* Body — keyed so tab/type switches fade in (state lives above, so
@@ -514,6 +519,120 @@ function PhotosPane({ casId, rid, ctx }) {
         <Btn onClick={ctx.closeComposer} disabled={!!loading}>{editing ? "Done" : "Cancel"}</Btn>
         <Btn primary onClick={submit} disabled={!!loading || !files.length}>
           {files.length ? `${editing ? "Add" : "Upload"} ${files.length}` : (editing ? "Add" : "Upload")}
+        </Btn>
+      </div>
+    </React.Fragment>
+  );
+}
+
+// ── File type — upload any attachment(s) as a FileEvidence ──────────────
+function fmtBytes(b) {
+  if (!b && b !== 0) return "";
+  if (b < 1024) return b + " B";
+  if (b < 1048576) return (b / 1024).toFixed(0) + " KB";
+  return (b / 1048576).toFixed(1) + " MB";
+}
+
+function FilesPane({ casId, ctx }) {
+  const [files, setFiles]       = React.useState([]);
+  const [dragging, setDragging] = React.useState(false);
+  const fileRef = React.useRef(null);
+  const { loading, error, run } = useAsyncOp();
+
+  function addFiles(fs) {
+    const arr = Array.from(fs || []);
+    if (arr.length) setFiles((prev) => [...prev, ...arr]);
+  }
+  const totalMB = (files.reduce((a, f) => a + (f.size || 0), 0) / 1048576).toFixed(1) + " MB";
+
+  async function submit() {
+    if (!files.length) return;
+    await run(`Uploading ${files.length} file${files.length > 1 ? "s" : ""}…`, async () => {
+      await API.createFile(casId, files, null, null);
+      await ctx.refreshAfterMutation();
+      ctx.closeComposer();
+    });
+  }
+
+  return (
+    <React.Fragment>
+      <div className="mono-fade" style={{ padding: "0 14px", overflow: "auto",
+             display: "flex", flexDirection: "column", gap: 8 }}>
+        <div
+          onDragOver={(e) => { e.preventDefault(); if (!dragging) setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files); }}
+          onClick={() => !files.length && fileRef.current && fileRef.current.click()}
+          style={{
+            borderRadius: 5, padding: files.length ? 12 : 24,
+            background: dragging ? "rgba(0,0,0,0.045)" : "#fff",
+            boxShadow: dragging ? `inset 0 0 0 2px ${A.solid}` : "inset 0 0 0 1px rgba(0,0,0,0.12)",
+            backgroundImage: !files.length && !dragging
+              ? "repeating-linear-gradient(45deg, transparent 0 6px, rgba(0,0,0,0.035) 6px 12px)"
+              : "none",
+            cursor: files.length ? "default" : "pointer",
+            transition: "all 0.15s",
+          }}>
+          {files.length ? (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between",
+                     alignItems: "center", marginBottom: 8, padding: "0 2px" }}>
+                <span style={{ fontSize: 11, fontWeight: 500, color: N.ink }}>
+                  {files.length} file{files.length > 1 ? "s" : ""} · {totalMB}
+                </span>
+                <span onClick={() => fileRef.current && fileRef.current.click()}
+                  style={{ fontSize: 10.5, color: N.ink, fontWeight: 500, cursor: "pointer",
+                           display: "inline-flex", alignItems: "center", gap: 4,
+                           textDecoration: "underline" }}>
+                  <I name="upload" size={11} stroke={1.7} /> Add more
+                </span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {files.map((f, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8,
+                         padding: "5px 8px", borderRadius: 5, background: "rgba(0,0,0,0.03)" }}>
+                    <I name="file" size={13} stroke={1.6} style={{ color: N.inkSoft, flexShrink: 0 }} />
+                    <span style={{ fontSize: 12, color: N.inkDeep, flex: 1, minWidth: 0,
+                           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {f.name}
+                    </span>
+                    <span style={{ fontSize: 10.5, color: N.inkSoft, flexShrink: 0 }}>{fmtBytes(f.size)}</span>
+                    <DeleteChip onClick={(e) => { e.stopPropagation(); setFiles((p) => p.filter((_, j) => j !== i)); }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div style={{ textAlign: "center", display: "flex", flexDirection: "column",
+                   alignItems: "center", gap: 8 }}>
+              <div style={{ width: 42, height: 42, borderRadius: 5,
+                     background: dragging ? A.solid : "#fff", color: dragging ? A.onAccent : N.ink,
+                     display: "flex", alignItems: "center", justifyContent: "center",
+                     boxShadow: dragging ? "none" : "inset 0 0 0 1px rgba(0,0,0,0.12)",
+                     transform: dragging ? "scale(1.08)" : "scale(1)", transition: "all 0.15s" }}>
+                <I name="file" size={18} stroke={1.6} />
+              </div>
+              <div style={{ fontSize: 12.5, fontWeight: 500, color: N.inkDeep }}>
+                {dragging ? "Drop files to add" : "Drag files here"}
+              </div>
+              <div style={{ fontSize: 11, color: N.inkSoft }}>
+                {dragging ? "Release to upload"
+                  : <>or <span style={{ color: N.inkDeep, fontWeight: 500, textDecoration: "underline" }}>browse</span> · any file type</>}
+              </div>
+            </div>
+          )}
+        </div>
+        <input ref={fileRef} type="file" multiple style={{ display: "none" }}
+          onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
+      </div>
+
+      {/* Footer */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px 10px" }}>
+        <StatusLine loading={loading} error={error} />
+        <div style={{ flex: 1 }} />
+        <Btn onClick={ctx.closeComposer} disabled={!!loading}>Cancel</Btn>
+        <Btn primary onClick={submit} disabled={!!loading || !files.length}>
+          {files.length ? `Upload ${files.length}` : "Upload"}
         </Btn>
       </div>
     </React.Fragment>

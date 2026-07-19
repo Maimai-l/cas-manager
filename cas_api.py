@@ -90,6 +90,8 @@ class ReflectionEntry:
     lo_ids: list[int] = field(default_factory=list)
     s3_urls: list[str] = field(default_factory=list)
     is_placeholder: Optional[bool] = None
+    # File attachments (for kind == "file"): each {"name": str, "size": str}.
+    files: list = field(default_factory=list)
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -412,6 +414,21 @@ def scan_page(html: str, page_no: int) -> list[ReflectionEntry]:
             raw = rte.decode_contents().strip()
             body_html = raw if raw else None
 
+        # ── Extract file attachments (file-evidence) ───────────────────────
+        files: list = []
+        for f in el.select(".fileslibrary .file"):
+            a = f.select_one("a.file-name") or f.select_one("a[href]")
+            if not a:
+                continue
+            fname = a.get_text(strip=True)
+            if not fname:
+                continue
+            info = f.select_one(".asset-info")
+            files.append({
+                "name": fname,
+                "size": info.get_text(strip=True) if info else "",
+            })
+
         # ── Extract album photos directly from the list page ───────────────
         photos: list[Photo] = []
         for i, photo_div in enumerate(el.select(".album .photo")):
@@ -444,6 +461,7 @@ def scan_page(html: str, page_no: int) -> list[ReflectionEntry]:
             group_date=current_date, page_no=page_no, pos=pos,
             body_html=body_html,
             photos=photos,
+            files=files,
             is_placeholder=is_ph,
         ))
 
@@ -748,6 +766,52 @@ def create_album(s: requests.Session, base: str, cas_id: int,
     # Album body can't be set on create — patch it after settle
     time.sleep(4.0)
     return rid
+
+
+_CT_BY_EXT = {
+    ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+    ".gif": "image/gif", ".webp": "image/webp", ".heic": "image/heic",
+    ".pdf": "application/pdf", ".doc": "application/msword",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".ppt": "application/vnd.ms-powerpoint",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ".xls": "application/vnd.ms-excel",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".txt": "text/plain", ".mp4": "video/mp4", ".mov": "video/quicktime",
+}
+
+
+def _guess_ct(fname: str) -> str:
+    dot = fname.rfind(".")
+    return _CT_BY_EXT.get(fname[dot:].lower(), "application/octet-stream") if dot >= 0 \
+        else "application/octet-stream"
+
+
+def create_file_evidence(s: requests.Session, base: str, cas_id: int,
+                         csrf: str, lo_ids: list[int],
+                         files_in: list[tuple[str, bytes]],   # (filename, data)
+                         date: Optional[str] = None) -> int:
+    """Upload one or more file attachments as a FileEvidence. Mirrors the
+    AlbumEvidence multipart shape, using assets_attributes (ManageBac stores
+    file attachments as Assets — see the uploads/asset/file/ URLs)."""
+    list_url = _url_list(base, cas_id)
+    date_str = mb_date(date)
+    before = {e.rid for _, pg in iter_pages(s, base, cas_id, 1) for e in pg}
+
+    data = [("type", "FileEvidence"), *_lo_fields(lo_ids), ("commit", "添加新纪录")]
+    files = []
+    for i, (fname, fdata) in enumerate(files_in):
+        files.append((f"evidence[assets_attributes][{i}][file]",
+                      (fname, fdata, _guess_ct(fname))))
+        data += [
+            (f"evidence[assets_attributes][{i}][file_cache]", ""),
+            (f"evidence[assets_attributes][{i}][created_at]", date_str),
+        ]
+
+    r = s.post(list_url, headers=_xhr_headers(base, csrf, list_url),
+               data=data, files=files, allow_redirects=False, timeout=180)
+    _check(r, "create_file_evidence")
+    return _poll_new_rid(s, base, cas_id, before)
 
 
 def substitute_date_in_html(body_html: str, new_date_str: str) -> str:

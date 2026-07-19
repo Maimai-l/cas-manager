@@ -59,6 +59,46 @@ def _strip_html(html: str) -> str:
     return " ".join(text.split())
 
 
+def _html_to_text(html: str) -> str:
+    """HTML → plain text, PRESERVING paragraph and line breaks.
+
+    Used to seed the edit box and the copy button: ManageBac stores journals as
+    <p>…</p> paragraphs with <br> soft breaks, and collapsing those to spaces
+    (like _strip_html does) is what made edited entries come back as one blob.
+    Block-closing tags become blank lines, <br> becomes a single newline."""
+    import html as _h
+    s = _h.unescape(html or "")
+    s = s.replace(cas_api.PLACEHOLDER_MARKER, "")
+    s = re.sub(r"(?i)<\s*br\s*/?>", "\n", s)
+    s = re.sub(r"(?i)</\s*(p|div|li|h[1-6]|blockquote|ul|ol)\s*>", "\n\n", s)
+    s = re.sub(r"<[^>]+>", "", s)                    # strip remaining tags
+    # Collapse inline whitespace per line, keep the newline structure.
+    lines = [re.sub(r"[ \t ]+", " ", ln).strip() for ln in s.split("\n")]
+    s = "\n".join(lines)
+    s = re.sub(r"\n{3,}", "\n\n", s)                 # at most one blank line
+    return s.strip()
+
+
+def _plain_to_html(text: str) -> str:
+    """Plain text → ManageBac redactor HTML. Blank lines split paragraphs;
+    single newlines within a paragraph become <br>. HTML-escapes content so
+    stray <, >, & don't corrupt the markup. Text that already looks like HTML
+    (starts with '<') is passed through untouched."""
+    import html as _h
+    t = (text or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+    if not t:
+        return ""
+    if t.startswith("<"):
+        return t
+    paras = re.split(r"\n{2,}", t)
+    out = []
+    for para in paras:
+        lines = [_h.escape(ln.strip()) for ln in para.split("\n") if ln.strip()]
+        if lines:
+            out.append("<p>" + "<br>".join(lines) + "</p>")
+    return "".join(out)
+
+
 # LO ID → display string (LO# · Title)
 _LO_DISPLAY: dict[int, str] = {
     142285: "LO1 · Strengths & Growth",
@@ -133,10 +173,11 @@ def _enrich_reflection(r: dict) -> dict:
     """Add display-friendly fields to a reflection dict."""
     photos = r.get("photos") or []
     body_html = r.get("body_html") or ""
-    r["body_text"]    = _strip_html(body_html)
+    r["body_text"]    = _html_to_text(body_html)   # keeps paragraph/line breaks
     r["body_preview"] = _body_preview(body_html)
     r["date_iso"]     = _date_iso(r.get("group_date", ""))
     r["lo_display"]   = _lo_display_from_ids(r.get("lo_ids") or [])
+    r["file_list"]    = r.get("files") or []
     r["photo_list"]   = [
         {
             "id":      p["id"],
@@ -345,10 +386,7 @@ def api_create_journal(cas_id: int):
     lo_ids   = data.get("lo_ids") or None
     if not body.strip():
         return _err("body_html is required")
-    # Wrap plain text in <p> tags if needed
-    if not body.strip().startswith("<"):
-        body = "".join(f"<p>{l.strip()}</p>"
-                       for l in body.splitlines() if l.strip())
+    body = _plain_to_html(body)   # no-op if already HTML; keeps line breaks
     rid = ctrl.ctrl_create_journal(cas_id, body, lo_ids=lo_ids)
     return _ok({"rid": rid})
 
@@ -396,6 +434,22 @@ def api_create_album(cas_id: int):
 
     rid = ctrl.ctrl_create_album_bytes(cas_id, photos, lo_ids=lo_ids,
                                        date_str=date)
+    return _ok({"rid": rid})
+
+
+@app.route("/api/experiences/<int:cas_id>/file", methods=["POST"])
+def api_create_file(cas_id: int):
+    # Multipart: one or more attachments in "files"
+    uploaded = request.files.getlist("files")
+    if not uploaded:
+        return _err("Please select at least one file", 400)
+    lo_ids = _parse_lo_ids_form(request.form.get("lo_ids"))
+    date   = request.form.get("date") or None
+    files: list[tuple[str, bytes]] = [
+        (f.filename or f"file_{i}", f.read()) for i, f in enumerate(uploaded)
+    ]
+    rid = ctrl.ctrl_create_file_evidence(cas_id, files, lo_ids=lo_ids,
+                                         date_str=date)
     return _ok({"rid": rid})
 
 
@@ -455,9 +509,7 @@ def api_edit_reflection(rid: int):
         return _err("cas_id required")
     if not body.strip():
         return _err("body_html required")
-    if not body.strip().startswith("<"):
-        body = "".join(f"<p>{l.strip()}</p>"
-                       for l in body.splitlines() if l.strip())
+    body = _plain_to_html(body)   # no-op if already HTML; keeps line breaks
     ctrl.ctrl_edit_journal(int(cas_id), rid, body, lo_ids=lo_ids)
     return _ok()
 

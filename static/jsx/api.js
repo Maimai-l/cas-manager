@@ -100,6 +100,16 @@
     deletePhoto: (rid, photo_id, cas_id) =>
       del(`/api/reflections/${rid}/album/photos/${photo_id}?cas_id=${cas_id}`),
 
+    // ── Files ───────────────────────────────────────────────────────────
+    // files = File[] (any type), lo_ids = number[]|null
+    createFile: (cas_id, files, lo_ids, date) => {
+      const form = new FormData();
+      files.forEach((f) => form.append("files", f));
+      if (lo_ids) form.append("lo_ids", JSON.stringify(lo_ids));
+      if (date)   form.append("date", date);
+      return postForm(`/api/experiences/${cas_id}/file`, form);
+    },
+
     // ── AI ──────────────────────────────────────────────────────────────
     // For kind="edit", pass `existing` (current journal body) — AI revises it
     // using `notes` as modification instructions.

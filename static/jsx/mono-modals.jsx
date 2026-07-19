@@ -43,12 +43,19 @@ function useAsyncOp() {
   return { loading, error, run, clearError: () => setError(null) };
 }
 
-// Plain text → <p> HTML
+// Plain text → ManageBac redactor HTML. Blank lines split paragraphs; single
+// newlines within a paragraph become <br> (matching how ManageBac stores
+// journals) so hand-typed line breaks survive the round-trip. Content is
+// escaped so stray <, >, & don't corrupt the markup.
 function _wrapPlainAsHtml(text) {
-  const t = (text || "").trim();
+  const t = (text || "").replace(/\r\n?/g, "\n").trim();
   if (!t) return "";
   if (t.startsWith("<")) return t;
-  return t.split(/\n+/).filter((l) => l.trim()).map((l) => `<p>${l.trim()}</p>`).join("");
+  const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return t.split(/\n{2,}/).map((para) => {
+    const inner = para.split("\n").map((l) => l.trim()).filter(Boolean).map(esc).join("<br>");
+    return inner ? `<p>${inner}</p>` : "";
+  }).filter(Boolean).join("");
 }
 
 // Strip HTML tags (for display in textarea)
