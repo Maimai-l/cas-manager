@@ -420,19 +420,37 @@ def ctrl_create_album_bytes(
 def ctrl_copy_to_clipboard(text: str) -> bool:
     """Write text to the OS clipboard from the app process.
 
-    Browser clipboard APIs (navigator.clipboard / execCommand) require a live
-    user gesture, which is gone by the time an async "Copy prompt" finishes its
-    network round-trip — so they fail inside the webview. Writing from the
-    Python side sidesteps that entirely. Returns True on success."""
+    Browser clipboard APIs are unreliable inside the webview (no user gesture
+    after an async build; execCommand can report success without writing), so
+    the UI copies through here. Returns True on success.
+
+    macOS goes straight to NSPasteboard via AppKit — pywebview's Cocoa backend
+    already pulls in pyobjc, so there's no new dependency, no external process,
+    and none of the PyInstaller DYLD-env breakage that can make a bundled app's
+    `pbcopy` fail silently. Everything else (and macOS if AppKit is missing)
+    shells out to pbcopy/clip/xclip with the bundle's injected library paths
+    stripped so system binaries run in a clean environment."""
     import os
     import subprocess
     import sys
     from shutil import which
 
-    data = (text or "").encode("utf-8")
+    text = text or ""
+
+    # ── macOS: native pasteboard, no subprocess ───────────────────────────
     if sys.platform == "darwin":
-        # Absolute path: a Finder-launched .app inherits a minimal PATH that may
-        # not resolve bare "pbcopy". /usr/bin/pbcopy ships with every macOS.
+        try:
+            import AppKit
+            pb = AppKit.NSPasteboard.generalPasteboard()
+            pb.clearContents()
+            ptype = getattr(AppKit, "NSPasteboardTypeString", "public.utf8-plain-text")
+            if pb.setString_forType_(text, ptype):
+                return True
+        except Exception:
+            pass  # fall through to the pbcopy CLI
+
+    data = text.encode("utf-8")
+    if sys.platform == "darwin":
         cmd = ["/usr/bin/pbcopy"] if os.path.exists("/usr/bin/pbcopy") else ["pbcopy"]
     elif sys.platform.startswith("win"):
         cmd = ["clip"]
@@ -445,8 +463,20 @@ def ctrl_copy_to_clipboard(text: str) -> bool:
                 break
         if cmd is None:
             return False
+
+    # A PyInstaller bundle injects DYLD_LIBRARY_PATH / LD_LIBRARY_PATH pointing
+    # at its own libs; a spawned system binary then loads the wrong dylibs and
+    # can fail silently. Restore the bootloader's saved originals (…_ORIG) or
+    # drop the vars so the CLI runs in a clean environment.
+    env = os.environ.copy()
+    for var in ("DYLD_LIBRARY_PATH", "DYLD_FRAMEWORK_PATH", "LD_LIBRARY_PATH"):
+        orig = env.pop(var + "_ORIG", None)
+        if orig is not None:
+            env[var] = orig
+        else:
+            env.pop(var, None)
     try:
-        p = subprocess.run(cmd, input=data, timeout=5)
+        p = subprocess.run(cmd, input=data, timeout=5, env=env)
         return p.returncode == 0
     except Exception:
         return False

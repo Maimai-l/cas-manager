@@ -22,26 +22,18 @@ const API = window.API;
 // only a fallback for a plain-browser dev session with no OS clipboard tool.
 async function copyTextToClipboard(text) {
   if (!text) return false;
+  // OS clipboard via the app process — reliable on the desktop app.
   try {
     const r = await API.copyClipboard(text);
     if (r && r.copied) return true;
-  } catch (_) { /* backend unavailable — fall through to browser paths */ }
+  } catch (_) { /* backend unreachable — try the browser API (dev in a tab) */ }
+  // navigator.clipboard is the only browser path we trust: if it resolves it
+  // genuinely wrote. (execCommand("copy") is deliberately NOT used — inside
+  // WebKit it returns true without writing, which is what made the button say
+  // "Copied" over an empty clipboard.)
   try {
     await navigator.clipboard.writeText(text);
     return true;
-  } catch (_) { /* fall through */ }
-  try {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.position = "fixed";
-    ta.style.left = "-9999px";
-    ta.style.top = "0";
-    document.body.appendChild(ta);
-    ta.focus();
-    ta.select();
-    const ok = document.execCommand("copy");
-    document.body.removeChild(ta);
-    return ok;
   } catch (_) {
     return false;
   }
