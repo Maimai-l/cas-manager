@@ -789,27 +789,26 @@ def _guess_ct(fname: str) -> str:
 
 def create_file_evidence(s: requests.Session, base: str, cas_id: int,
                          csrf: str, lo_ids: list[int],
-                         files_in: list[tuple[str, bytes]],   # (filename, data)
-                         date: Optional[str] = None) -> int:
-    """Upload one or more file attachments as a FileEvidence. Mirrors the
-    AlbumEvidence multipart shape, using assets_attributes (ManageBac stores
-    file attachments as Assets — see the uploads/asset/file/ URLs)."""
+                         filename: str, data_bytes: bytes,
+                         body_html: str = "") -> int:
+    """Upload a single file attachment as a FileEvidence.
+
+    FileEvidence has a one-to-one asset association (accepts_nested_attributes_for
+    :asset), so the field is the singular, unindexed
+    evidence[asset_attributes][file] — one file per reflection, never an array.
+    An optional evidence[body] carries reflection text alongside the file."""
     list_url = _url_list(base, cas_id)
-    date_str = mb_date(date)
     before = {e.rid for _, pg in iter_pages(s, base, cas_id, 1) for e in pg}
 
-    data = [("type", "FileEvidence"), *_lo_fields(lo_ids), ("commit", "添加新纪录")]
-    files = []
-    for i, (fname, fdata) in enumerate(files_in):
-        files.append((f"evidence[assets_attributes][{i}][file]",
-                      (fname, fdata, _guess_ct(fname))))
-        data += [
-            (f"evidence[assets_attributes][{i}][file_cache]", ""),
-            (f"evidence[assets_attributes][{i}][created_at]", date_str),
-        ]
+    fields = [("type", "FileEvidence"),
+              ("evidence[body]", body_html or ""),
+              *_lo_fields(lo_ids),
+              ("commit", "添加新纪录")]
+    files = [("evidence[asset_attributes][file]",
+              (filename, data_bytes, _guess_ct(filename)))]
 
     r = s.post(list_url, headers=_xhr_headers(base, csrf, list_url),
-               data=data, files=files, allow_redirects=False, timeout=180)
+               data=fields, files=files, allow_redirects=False, timeout=180)
     _check(r, "create_file_evidence")
     return _poll_new_rid(s, base, cas_id, before)
 

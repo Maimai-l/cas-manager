@@ -439,18 +439,20 @@ def api_create_album(cas_id: int):
 
 @app.route("/api/experiences/<int:cas_id>/file", methods=["POST"])
 def api_create_file(cas_id: int):
-    # Multipart: one or more attachments in "files"
+    # Multipart: one or more attachments in "files" (each becomes its own
+    # FileEvidence), optional "body" text applied to each.
     uploaded = request.files.getlist("files")
     if not uploaded:
         return _err("Please select at least one file", 400)
-    lo_ids = _parse_lo_ids_form(request.form.get("lo_ids"))
-    date   = request.form.get("date") or None
+    lo_ids    = _parse_lo_ids_form(request.form.get("lo_ids"))
+    body      = request.form.get("body", "")
+    body_html = _plain_to_html(body) if body.strip() else ""
     files: list[tuple[str, bytes]] = [
         (f.filename or f"file_{i}", f.read()) for i, f in enumerate(uploaded)
     ]
-    rid = ctrl.ctrl_create_file_evidence(cas_id, files, lo_ids=lo_ids,
-                                         date_str=date)
-    return _ok({"rid": rid})
+    rids = ctrl.ctrl_create_file_evidence(cas_id, files, lo_ids=lo_ids,
+                                          body_html=body_html)
+    return _ok({"rids": rids})
 
 
 @app.route("/api/reflections/<int:rid>/album/photos", methods=["GET"])

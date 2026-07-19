@@ -101,12 +101,13 @@
       del(`/api/reflections/${rid}/album/photos/${photo_id}?cas_id=${cas_id}`),
 
     // ── Files ───────────────────────────────────────────────────────────
-    // files = File[] (any type), lo_ids = number[]|null
-    createFile: (cas_id, files, lo_ids, date) => {
+    // files = File[] (any type; each becomes its own FileEvidence),
+    // lo_ids = number[]|null, body = optional reflection text applied to each
+    createFile: (cas_id, files, lo_ids, body) => {
       const form = new FormData();
       files.forEach((f) => form.append("files", f));
-      if (lo_ids) form.append("lo_ids", JSON.stringify(lo_ids));
-      if (date)   form.append("date", date);
+      if (lo_ids)       form.append("lo_ids", JSON.stringify(lo_ids));
+      if (body && body.trim()) form.append("body", body);
       return postForm(`/api/experiences/${cas_id}/file`, form);
     },
 
