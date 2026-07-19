@@ -227,7 +227,7 @@ def api_status():
     return _ok({
         "logged_in":   logged_in,
         "ai_provider": cfg.get("ai_provider", "prompt"),
-        "ai_model":    cfg.get("ai_model", "claude-opus-4-6"),
+        "ai_model":    cfg.get("ai_model", "deepseek-chat"),
         "stats":       stats,
     })
 

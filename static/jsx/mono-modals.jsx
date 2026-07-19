@@ -68,12 +68,12 @@ function Dropzone({ files, dragging, totalSize, onPick, onDragOver, onDragLeave,
       onDrop={onDrop}
       style={{
         borderRadius: 5, padding: filled ? 14 : 24,
-        background: dragging ? "rgba(60,48,30,0.05)" : "#fff",
+        background: dragging ? "rgba(0,0,0,0.045)" : "#fff",
         boxShadow: dragging
           ? `inset 0 0 0 2px ${A.solid}`
           : "inset 0 0 0 1px rgba(0,0,0,0.12)",
         backgroundImage: !filled && !dragging
-          ? `repeating-linear-gradient(45deg, transparent 0 6px, rgba(60,48,30,0.035) 6px 12px)`
+          ? `repeating-linear-gradient(45deg, transparent 0 6px, rgba(0,0,0,0.035) 6px 12px)`
           : "none",
         transition: "all 0.15s"
       }}>

@@ -64,7 +64,7 @@ function SettingsModal() {
 }
 
 function Divider() {
-  return <div style={{ height: 1, background: "rgba(60,48,30,0.13)" }} />;
+  return <div style={{ height: 1, background: "rgba(0,0,0,0.10)" }} />;
 }
 
 // ── Account: login or re-login ─────────────────────────────────────────
@@ -74,20 +74,13 @@ function AccountPane() {
   const baseUrl  = (ctx.config && ctx.config.base) || "";
   return (
     <>
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep, marginBottom: 2 }}>
-          ManageBac connection
-        </div>
-        <div style={{ fontSize: 11, color: N.inkMid, lineHeight: 1.5 }}>
-          Log in using your ManageBac email and password; CAS Manager will automatically renew the session in the background.
-        </div>
-      </div>
+      <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep }}>Account</div>
 
       {/* Show the configured URL only after login succeeds — the login form
           below has its own URL field for the first-time / re-login flow. */}
       {loggedIn && baseUrl && (
         <div>
-          <FieldLabel hint="Loaded from cas_config.json">School base URL</FieldLabel>
+          <FieldLabel>School URL</FieldLabel>
           <FieldShell mono>{baseUrl}</FieldShell>
         </div>
       )}
@@ -105,7 +98,7 @@ function LoggedInBlock() {
       padding: "12px 14px",
       background: "#fff",
       borderRadius: 0,
-      boxShadow: "inset 0 0 0 1px rgba(60,48,30,0.13)",
+      boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
       display: "flex", alignItems: "center", gap: 12
     }}>
       <div style={{
@@ -165,9 +158,9 @@ function LoginForm({ onCancel }) {
   return (
     <div style={{
       padding: "14px 14px 12px",
-      background: "#faf8f4",
+      background: "#f6f7f8",
       borderRadius: 0,
-      boxShadow: "inset 0 0 0 1px rgba(60,48,30,0.13)",
+      boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
       display: "flex", flexDirection: "column", gap: 10
     }}>
       <FieldLabel hint="In the form of https://<school>.managebac.cn / .com / .org">
@@ -216,13 +209,11 @@ function LoginForm({ onCancel }) {
       <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", marginTop: 4 }}>
         {onCancel && <Btn onClick={onCancel} disabled={loading}>Cancel</Btn>}
         <Btn primary onClick={doLogin} disabled={loading}>
-          {loading ? "Logging in…" : "login"}
+          {loading ? "Logging in…" : "Log in"}
         </Btn>
       </div>
       <div style={{ fontSize: 10.5, color: N.inkSoft, lineHeight: 1.5, marginTop: 4 }}>
-        Credentials are stored only on this computer (mb_state.json) so the app can
-        re-login automatically when the session expires — you won't need to type them again.
-        The school URL is saved to the configuration after a successful login.
+        Stored locally so the app can re-login on its own — kept on this computer only.
       </div>
     </div>);
 }
@@ -253,38 +244,31 @@ function AIProviderPane() {
 
   return (
     <>
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep, marginBottom: 2 }}>
-          AI provider
-        </div>
-        <div style={{ fontSize: 11, color: N.inkMid }}>
-          Choose how to generate reflections from your rough notes.
-        </div>
-      </div>
+      <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep }}>AI provider</div>
 
       <div style={{ display: "flex", gap: 8 }}>
-        <ProviderCard active={provider === "prompt"}    onClick={() => patch({ ai_provider: "prompt" })}
-          name="Prompt"     sub="Copy & paste — works with any AI" icon="copy" />
-        <ProviderCard active={provider === "ollama"}    onClick={() => patch({ ai_provider: "ollama" })}
-          name="Ollama"     sub="Local model on your Mac" icon="cpu" />
-        <ProviderCard active={provider === "anthropic"} onClick={() => patch({ ai_provider: "anthropic" })}
-          name="Anthropic"  sub="Claude API (ANTHROPIC_API_KEY)" icon="cloud" />
+        <ProviderCard active={provider === "prompt"}   onClick={() => patch({ ai_provider: "prompt" })}
+          name="Prompt"   sub="Copy & paste — any AI" icon="copy" />
+        <ProviderCard active={provider === "deepseek"} onClick={() => patch({ ai_provider: "deepseek" })}
+          name="DeepSeek" sub="API · cheap" icon="cloud" />
+        <ProviderCard active={provider === "ollama"}   onClick={() => patch({ ai_provider: "ollama" })}
+          name="Ollama"   sub="Local model" icon="cpu" />
       </div>
 
       <div>
-        <FieldLabel>Anthropic model</FieldLabel>
+        <FieldLabel hint="DEEPSEEK_API_KEY in your environment">DeepSeek model</FieldLabel>
         <FieldShell mono style={{ padding: 0 }}>
           <input
             value={model}
             onChange={(e) => ctx.updateConfig({ ai_model: e.target.value }).catch((err) => setError(err.message))}
-            placeholder="claude-opus-4-6"
+            placeholder="deepseek-chat"
             style={inputStyle}
           />
         </FieldShell>
       </div>
 
       <div>
-        <FieldLabel hint="for ollama provider">Ollama model · URL</FieldLabel>
+        <FieldLabel hint="for Ollama">Ollama model · URL</FieldLabel>
         <div style={{ display: "flex", gap: 8 }}>
           <FieldShell mono style={{ padding: 0, flex: 1 }}>
             <input
@@ -303,10 +287,6 @@ function AIProviderPane() {
             />
           </FieldShell>
         </div>
-      </div>
-
-      <div style={{ fontSize: 10.5, color: N.inkSoft, lineHeight: 1.5 }}>
-        Want to customize the AI's writing style, word limit, required LOs to cover, etc.? See <b>System prompts</b> on the right.
       </div>
 
       {saving && <div style={{ fontSize: 11, color: N.inkMid }}>Saving…</div>}
@@ -348,13 +328,9 @@ function PromptsPane() {
   return (
     <>
       <div>
-        <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep, marginBottom: 2 }}>
-          System prompts
-        </div>
-        <div style={{ fontSize: 11, color: N.inkMid, lineHeight: 1.55 }}>
-          Each prompt determines all AI behavior in the corresponding scenario. Click a prompt to expand and edit.
-          <b>Reset</b> Will delete your custom version and restore the built-in default. 
-          Each time you generate, the current experience's proposal and LO list will be automatically appended at the end.
+        <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep }}>System prompts</div>
+        <div style={{ fontSize: 11, color: N.inkMid, lineHeight: 1.55, marginTop: 3 }}>
+          Click one to edit. The experience's proposal and LOs are appended automatically.
         </div>
       </div>
 
@@ -436,7 +412,7 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
     <div style={{
       borderRadius: 0,
       background: "#fff",
-      boxShadow: "inset 0 0 0 1px rgba(60,48,30,0.13)",
+      boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
       overflow: "hidden",
       transition: "background 0.12s"
     }}>
@@ -500,9 +476,9 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
             {showDefault && (
               <div style={{
                 marginTop: 6, padding: "10px 12px",
-                background: "#faf8f4",
+                background: "#f6f7f8",
                 borderRadius: 0,
-                boxShadow: "inset 0 0 0 1px rgba(60,48,30,0.13)",
+                boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
                 fontSize: 11.5, lineHeight: 1.55,
                 color: N.inkMid,
                 whiteSpace: "pre-wrap", wordBreak: "break-word",
@@ -600,8 +576,8 @@ function ProviderCard({ name, sub, icon, active, onClick }) {
       style={{
         flex: 1, padding: "12px 12px 10px",
         borderRadius: 0, cursor: "pointer",
-        background: active ? "rgba(60,48,30,0.05)" : "#fff",
-        boxShadow: active ? `inset 0 0 0 1.5px rgba(20,20,20,0.8)` : "inset 0 0 0 1px rgba(60,48,30,0.13)",
+        background: active ? "rgba(0,0,0,0.045)" : "#fff",
+        boxShadow: active ? `inset 0 0 0 1.5px rgba(20,20,20,0.8)` : "inset 0 0 0 1px rgba(0,0,0,0.10)",
         transition: "background 0.12s, box-shadow 0.12s"
       }}>
       <div style={{
@@ -637,12 +613,9 @@ function GeneralPane() {
   function patch(p) { ctx.updateConfig(p).catch((e) => setError(e.message)); }
   return (
     <>
+      <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep }}>General</div>
       <div>
-        <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep, marginBottom: 2 }}>General</div>
-        <div style={{ fontSize: 11, color: N.inkMid }}>App-level settings stored in <code>cas_config.json</code>.</div>
-      </div>
-      <div>
-        <FieldLabel hint="Switch school here · saves on blur">School base URL</FieldLabel>
+        <FieldLabel hint="switch school">School URL</FieldLabel>
         <FieldShell mono style={{ padding: 0 }}>
           <input
             // key forces re-mount when cfg.base updates from a successful login,
@@ -671,7 +644,7 @@ function GeneralPane() {
         <div style={{
           padding: "10px 12px", borderRadius: 0,
           background: "#fff",
-          boxShadow: "inset 0 0 0 1px rgba(60,48,30,0.13)",
+          boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
           fontSize: 11.5, color: N.ink, lineHeight: 1.6, fontFamily: "ui-monospace, SF Mono, monospace"
         }}>
           {ctx.status && ctx.status.stats
@@ -696,12 +669,9 @@ function DangerPane() {
   return (
     <>
       <div>
-        <div style={{ fontSize: 13, fontWeight: 500, color: "#a4332e", marginBottom: 2 }}>
-          Danger Zone
-        </div>
-        <div style={{ fontSize: 11, color: N.inkMid, lineHeight: 1.55 }}>
-          When enabled, a red <b>Delete</b> button will appear in the top-right corner of each reflection card, allowing you to delete the reflection directly from ManageBac.
-Deletion cannot be undone — only enable this when you are <i>absolutely sure</i>.
+        <div style={{ fontSize: 13, fontWeight: 500, color: "#a4332e" }}>Danger Zone</div>
+        <div style={{ fontSize: 11, color: N.inkMid, lineHeight: 1.55, marginTop: 3 }}>
+          Shows a Delete button on each reflection. Deletion can't be undone.
         </div>
       </div>
       <div style={{

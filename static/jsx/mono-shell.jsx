@@ -7,18 +7,18 @@ const A = window.MONO_ACCENT;
 const N = window.MONO_NEUTRALS;
 const S = window.MONO_STRAND;
 
-// Light, faintly-warm paper system — solid fills everywhere (no
-// translucency), just a hair off pure white so the side columns read light
-// and clean rather than dead gray.
+// Cool neutral paper system — solid fills everywhere, a hair off pure white
+// so the side columns read light and clean, not gray and not warm (warm
+// clashes with the chartreuse accent).
 const BG = {
-  sidebar: "#f7f6f3",   // side columns — barely-warm off-white
-  bar:     "#fbfaf8",   // toolbars / docks / footers
+  sidebar: "#f4f5f6",   // side columns — cool off-white
+  bar:     "#fafbfc",   // toolbars / docks / footers
   main:    "#ffffff",   // content
-  hover:   "rgba(50,42,28,0.045)",
-  active:  "rgba(50,42,28,0.08)",
+  hover:   "rgba(0,0,0,0.04)",
+  active:  "rgba(0,0,0,0.07)",
 };
-const SEP = "1px solid rgba(50,42,28,0.11)";   // soft warm hairline
-const R   = 5;                                  // control corner radius
+const SEP = "1px solid rgba(0,0,0,0.10)";   // neutral hairline
+const R   = 5;                               // control corner radius
 window.MONO_BG = BG;
 
 // Pull the experience's strand list as a canonical-order array of valid keys.
@@ -235,7 +235,7 @@ function Sidebar({ experiences, activeId, onSelect, syncState }) {
         <div style={{
           flex: 1, display: "flex", alignItems: "center", gap: 6,
           height: 26, padding: "0 8px",
-          background: "rgba(60,48,30,0.06)",
+          background: "rgba(0,0,0,0.05)",
           borderRadius: R + 1,
           fontSize: 11.5,
         }}>
@@ -348,7 +348,9 @@ function Toolbar({ dotKind, onOpenSettings, children }) {
     <div style={{
       height: 42, flexShrink: 0,
       display: "flex", alignItems: "center", gap: 8,
-      padding: "0 14px",
+      // Left content aligns with the header title + reflection rows (22px);
+      // a little less on the right so the settings button sits near the edge.
+      padding: "0 16px 0 22px",
       borderBottom: SEP,
       background: BG.bar,
     }}>
