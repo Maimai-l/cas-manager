@@ -332,10 +332,9 @@ function ComposerInner({ payload, exp, ctx }) {
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder={
-                    isSA         ? "What to emphasize in the answer (optional)" :
-                    editExisting ? "What to change — e.g. tighten paragraph 2, emphasize teamwork" :
-                    isFinal      ? "Themes to emphasize — e.g. perseverance, LO5 collaboration" :
-                                   "Your notes — e.g. practiced chord transitions, 45 min"
+                    isSA         ? "What to emphasize (optional)" :
+                    editExisting ? "What to change" :
+                    isFinal      ? "Themes to emphasize" : "Your notes"
                   }
                   style={taStyle(110)}
                 />
@@ -345,22 +344,11 @@ function ComposerInner({ payload, exp, ctx }) {
                   value={result}
                   onChange={(e) => setResult(e.target.value)}
                   placeholder={isManual
-                    ? "Paste the AI's response here…"
-                    : "Click Generate — the result lands here and can be edited"}
+                    ? "Paste the AI's response here"
+                    : "The result appears here after Generate"}
                   style={taStyle(110)}
                 />
               </div>
-            </div>
-            {/* Action + live preview, full width below both boxes */}
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              {isManual ? (
-                <CopyBtn primary label="Copy prompt" icon="copy"
-                         disabled={!!loading || !canBuild}
-                         onBefore={buildPrompt} />
-              ) : (
-                <Btn primary icon="sparkle" onClick={generateDirect}
-                     disabled={!!loading || !canBuild}>Generate</Btn>
-              )}
             </div>
             {previewHtml && (
               <div style={{
@@ -381,6 +369,14 @@ function ComposerInner({ payload, exp, ctx }) {
       }}>
         <StatusLine loading={loading} error={error} />
         <div style={{ flex: 1 }} />
+        {mode === "ai" && (isManual ? (
+          <CopyBtn primary label="Copy prompt" icon="copy"
+                   disabled={!!loading || !canBuild}
+                   onBefore={buildPrompt} />
+        ) : (
+          <Btn primary icon="sparkle" onClick={generateDirect}
+               disabled={!!loading || !canBuild}>Generate</Btn>
+        ))}
         <Btn onClick={ctx.closeComposer} disabled={!!loading}>Cancel</Btn>
         <Btn primary onClick={() => send(sendBody)}
              disabled={!!loading || !sendBody.trim() || (isSA && !saQ)}>
