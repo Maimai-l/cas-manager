@@ -443,17 +443,18 @@ def scan_page(html: str, page_no: int) -> list[ReflectionEntry]:
             photos.append(Photo(id=pseudo_id, caption=caption,
                                 created_at=created, s3_url=url))
 
-        # Detect placeholder from body_html:
+        # Detect placeholder from body_html using ONLY the app's own markers,
+        # which hand-written reflections never contain:
         #   - old tag: [CASMGR_PLACEHOLDER]
-        #   - stealth text marker: "casmgr-ph" (text inside span, survives ManageBac sanitizer)
-        #   - fallback template markers: [Title] or [Date] present in body (unfilled template)
+        #   - stealth text marker: "casmgr-ph" (span text, survives the sanitizer)
+        # (We used to also flag "[Title]"/"[Date]", but that misfired on real
+        # entries that happened to use brackets — every app placeholder carries
+        # the stealth marker anyway, so those heuristics aren't needed.)
         is_ph: Optional[bool] = None
         if body_html is not None:
             is_ph = (
                 PLACEHOLDER_TAG in body_html
                 or PLACEHOLDER_MARKER in body_html
-                or "[Title]" in body_html
-                or "[Date]" in body_html
             )
 
         entries.append(ReflectionEntry(
@@ -549,13 +550,14 @@ def enrich(entry: ReflectionEntry, edit_html: str,
             if v.isdigit():
                 entry.lo_ids.append(int(v))
 
-    # placeholder detection — old explicit tag, stealth text marker, or unfilled template
+    # placeholder detection — only the app's own markers (explicit tag or the
+    # stealth text marker); no [Title]/[Date] heuristics that misfire on real
+    # hand-written entries.
     txt = edit_html
     body = entry.body_html or ""
     is_ph = (placeholder_tag in txt or placeholder_tag in _html.unescape(txt)
              or any(placeholder_tag in p.caption for p in entry.photos)
-             or PLACEHOLDER_MARKER in body
-             or "[Title]" in body or "[Date]" in body)
+             or PLACEHOLDER_MARKER in body)
     entry.is_placeholder = is_ph
 
 

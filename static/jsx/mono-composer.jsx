@@ -323,45 +323,24 @@ function ComposerInner({ payload, exp, ctx }) {
             />
           </div>
         ) : (
-          <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-            {/* Left column — notes + one action button. The built prompt is
-                copied, not displayed: there is nothing to edit in it. */}
-            <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-              <FieldLabel>
-                {editExisting ? "Changes / instructions" :
-                 isFinal      ? "Themes to emphasize" : "Your notes"}
-              </FieldLabel>
-              <div className="mono-box" style={boxStyle}>
+          <React.Fragment>
+            {/* Two boxes, aligned side by side. Each box's placeholder is the
+                hint — no separate label above (that just repeated it). */}
+            <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+              <div className="mono-box" style={{ ...boxStyle, flex: 1, minWidth: 0 }}>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder={
-                    isSA         ? "Optional — what to emphasize in the answer" :
-                    editExisting ? "e.g. tighten the second paragraph, emphasize teamwork more" :
-                    isFinal      ? "e.g. focus on perseverance and LO5 (collaboration)" :
-                                   "e.g. practiced chord transitions, 45 min"
+                    isSA         ? "What to emphasize in the answer (optional)" :
+                    editExisting ? "What to change — e.g. tighten paragraph 2, emphasize teamwork" :
+                    isFinal      ? "Themes to emphasize — e.g. perseverance, LO5 collaboration" :
+                                   "Your notes — e.g. practiced chord transitions, 45 min"
                   }
                   style={taStyle(110)}
                 />
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                {isManual ? (
-                  <CopyBtn primary label="Copy prompt" icon="copy"
-                           disabled={!!loading || !canBuild}
-                           onBefore={buildPrompt} />
-                ) : (
-                  <Btn primary icon="sparkle" onClick={generateDirect}
-                       disabled={!!loading || !canBuild}>Generate</Btn>
-                )}
-              </div>
-            </div>
-
-            {/* Right column — AI response + live preview */}
-            <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-              <FieldLabel>
-                {isManual ? "Paste AI's response" : "Result"}
-              </FieldLabel>
-              <div className="mono-box" style={boxStyle}>
+              <div className="mono-box" style={{ ...boxStyle, flex: 1, minWidth: 0 }}>
                 <textarea
                   value={result}
                   onChange={(e) => setResult(e.target.value)}
@@ -371,31 +350,27 @@ function ComposerInner({ payload, exp, ctx }) {
                   style={taStyle(110)}
                 />
               </div>
-              {previewHtml && (
-                <div style={{
-                  padding: "9px 12px",
-                  background: "#fff",
-                  borderRadius: 5,
-                  fontSize: 12, lineHeight: 1.6, color: N.ink,
-                  boxShadow: `inset 0 0 0 1px rgba(0,0,0,0.12), inset 3px 0 0 0 ${A.solid}`,
-                  maxHeight: 120, overflow: "auto",
-                }} dangerouslySetInnerHTML={{ __html: previewHtml }} />
+            </div>
+            {/* Action + live preview, full width below both boxes */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              {isManual ? (
+                <CopyBtn primary label="Copy prompt" icon="copy"
+                         disabled={!!loading || !canBuild}
+                         onBefore={buildPrompt} />
+              ) : (
+                <Btn primary icon="sparkle" onClick={generateDirect}
+                     disabled={!!loading || !canBuild}>Generate</Btn>
               )}
             </div>
-          </div>
-        )}
-
-        {/* Current text being revised (journal edit) or current SA answer */}
-        {mode === "ai" && (editExisting || (isSA && saQ && (saQ.answer || "").trim())) && (
-          <div style={{
-            padding: "6px 10px", borderRadius: 5,
-            background: "rgba(0,0,0,0.025)",
-            boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.08)",
-            fontSize: 11, lineHeight: 1.5, color: N.inkMid,
-            maxHeight: 60, overflow: "auto", whiteSpace: "pre-wrap",
-          }}>
-            <b style={{ color: N.ink }}>Current:</b> {editExisting || saQ.answer}
-          </div>
+            {previewHtml && (
+              <div style={{
+                padding: "9px 12px", background: "#fff", borderRadius: 5,
+                fontSize: 12, lineHeight: 1.6, color: N.ink,
+                boxShadow: `inset 0 0 0 1px rgba(0,0,0,0.12), inset 3px 0 0 0 ${A.solid}`,
+                maxHeight: 120, overflow: "auto",
+              }} dangerouslySetInnerHTML={{ __html: previewHtml }} />
+            )}
+          </React.Fragment>
         )}
       </div>
 
