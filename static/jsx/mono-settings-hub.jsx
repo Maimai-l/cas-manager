@@ -828,7 +828,6 @@ function PlaceholderHubPanel() {
 
   const open = !!ctx.hubOpen;
   const BG = window.MONO_BG;
-  const FROST = window.MONO_FROST;
 
   // One container whose width animates between the 30px strip and the
   // 300px panel — the strip literally grows into the panel.
@@ -836,7 +835,7 @@ function PlaceholderHubPanel() {
     <div style={{
       width: open ? 300 : 30, flexShrink: 0,
       transition: "width 0.22s cubic-bezier(0.2, 0.8, 0.2, 1)",
-      ...FROST,
+      background: open ? BG.bar : BG.sidebar,
       borderLeft: HUB_SEP,
       display: "flex", flexDirection: "column", overflow: "hidden",
     }}>
