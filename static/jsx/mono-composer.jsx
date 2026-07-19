@@ -367,8 +367,8 @@ function ComposerInner({ payload, exp, ctx }) {
         display: "flex", alignItems: "center", gap: 8,
         padding: "8px 14px 10px",
       }}>
-        <StatusLine loading={loading} error={error} />
-        <div style={{ flex: 1 }} />
+        {/* AI action sits at the left edge — vertically under the notes box —
+            while Cancel/Send stay on the right; all on one row. */}
         {mode === "ai" && (isManual ? (
           <CopyBtn primary label="Copy prompt" icon="copy"
                    disabled={!!loading || !canBuild}
@@ -377,6 +377,8 @@ function ComposerInner({ payload, exp, ctx }) {
           <Btn primary icon="sparkle" onClick={generateDirect}
                disabled={!!loading || !canBuild}>Generate</Btn>
         ))}
+        <StatusLine loading={loading} error={error} />
+        <div style={{ flex: 1 }} />
         <Btn onClick={ctx.closeComposer} disabled={!!loading}>Cancel</Btn>
         <Btn primary onClick={() => send(sendBody)}
              disabled={!!loading || !sendBody.trim() || (isSA && !saQ)}>
