@@ -47,7 +47,7 @@ _CONFIG_DEFAULTS = {
     "cas_id": None,
     "lo_ids": [],
     "ai_provider": "anthropic",      # anthropic | ollama | prompt
-    "ai_model": "claude-opus-4-6",
+    "ai_model": "deepseek-chat",
     "ollama_model": "llama3.2",
     "ollama_url": "http://localhost:11434",
     "backup_dir": "mb_backup_out",
@@ -429,7 +429,7 @@ def cmd_experience(args, cfg):
 
 def _cmd_experience_create(args, cfg):
     """AI generates the full proposal from user's rough idea, then creates the experience."""
-    model = cfg.get("ai_model", "claude-opus-4-6")
+    model = cfg.get("ai_model", "deepseek-chat")
 
     print("── AI-Powered CAS Experience Creator ─────────────────────")
     print("Describe the experience you want to do (Ctrl+D when done):")
@@ -995,7 +995,7 @@ def _load_proposal_for(cas_id: int, s=None, base=None, cfg=None) -> Optional[dic
 
 
 def cmd_ai(args, cfg):
-    model = cfg.get("ai_model", "claude-opus-4-6")
+    model = cfg.get("ai_model", "deepseek-chat")
     notes = _read_notes(getattr(args, "notes", None))
 
     if args.ai_cmd == "draft":
@@ -1083,7 +1083,7 @@ def cmd_ai(args, cfg):
 
 def cmd_draft(args, cfg):
     cas_db.init_db()
-    model = cfg.get("ai_model", "claude-opus-4-6")
+    model = cfg.get("ai_model", "deepseek-chat")
 
     if args.draft_cmd == "add":
         cas_id = resolve_cas_id(args, cfg)

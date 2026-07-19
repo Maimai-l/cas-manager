@@ -38,7 +38,7 @@ _CONFIG_DEFAULTS = {
     "cas_id": None,
     "lo_ids": [],
     "ai_provider": "prompt",
-    "ai_model": "claude-opus-4-6",
+    "ai_model": "deepseek-chat",
     "ollama_model": "llama3.2",
     "ollama_url": "http://localhost:11434",
     "backup_dir": "mb_backup_out",
@@ -565,7 +565,7 @@ def ctrl_generate_ai(
     import cas_ai
 
     cfg = ctrl_config()
-    model = cfg.get("ai_model", "claude-opus-4-6")
+    model = cfg.get("ai_model", "deepseek-chat")
     proposal = ctrl_load_proposal(cas_id)
     history = _load_history_for(cas_id) if include_history else None
 
@@ -686,7 +686,7 @@ def ctrl_generate_sa(cas_id: int, question: str, notes: str = "",
     cfg = ctrl_config()
     proposal = ctrl_load_proposal(cas_id)
     history = _load_history_for(cas_id)
-    return cas_ai.ai_generate(notes, cfg.get("ai_model", "claude-opus-4-6"),
+    return cas_ai.ai_generate(notes, cfg.get("ai_model", "deepseek-chat"),
                               proposal=proposal, cfg=cfg, kind="sa_question",
                               existing=existing, history=history,
                               question=question)
