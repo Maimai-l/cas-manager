@@ -324,7 +324,7 @@ function ComposerInner({ payload, exp, ctx }) {
                     isSA         ? "Optional — what to emphasize in the answer" :
                     editExisting ? "e.g. tighten the second paragraph, emphasize teamwork more" :
                     isFinal      ? "e.g. focus on perseverance and LO5 (collaboration)" :
-                                   "e.g. practiced chord transitions, learned G→D switch, 45 min"
+                                   "e.g. practiced chord transitions, 45 min"
                   }
                   style={taStyle(110)}
                 />
