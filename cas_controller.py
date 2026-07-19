@@ -38,7 +38,8 @@ _CONFIG_DEFAULTS = {
     "cas_id": None,
     "lo_ids": [],
     "ai_provider": "prompt",
-    "ai_model": "claude-opus-4-6",
+    "ai_model": "deepseek-chat",
+    "deepseek_api_key": "",
     "ollama_model": "llama3.2",
     "ollama_url": "http://localhost:11434",
     "backup_dir": "mb_backup_out",
@@ -207,9 +208,18 @@ def ctrl_get_experience(cas_id: int) -> Optional[dict]:
 def ctrl_fetch_experiences_from_web() -> list[dict]:
     """Fetch live experience list from ManageBac and cache in DB.
     Returns list of {cas_id, name, is_completed}."""
+    from cas_errors import ScraperError
     s, base = ctrl_session()
     exps = cas_api.fetch_experiences(s, base)
+    if not exps:
+        # A real account always has experiences — an empty list means the
+        # page couldn't be parsed. Surface it instead of silently showing
+        # "no experiences" (and never touch the cached list on this path).
+        raise ScraperError(
+            "Couldn't read your experiences from ManageBac — the list page "
+            "came back empty. Try again, or check /api/debug/experiences.")
     cas_db.init_db()
+    ids = [e.cas_id for e in exps]
     with cas_db.open_db() as conn:
         for exp in exps:
             cas_db.upsert_experience(
@@ -218,6 +228,10 @@ def ctrl_fetch_experiences_from_web() -> list[dict]:
                 name=exp.name,
                 is_completed=exp.is_completed,
             )
+        # Anything that came back is definitely live — clear any stale
+        # is_deleted flag (recovers a DB wrongly wiped by an earlier bug).
+        conn.executemany("UPDATE experiences SET is_deleted = 0 WHERE id = ?",
+                         [(i,) for i in ids])
     return [{"cas_id": e.cas_id, "name": e.name, "is_completed": e.is_completed}
             for e in exps]
 
@@ -292,8 +306,15 @@ def ctrl_sync_all(
     progress_cb: Optional[Callable[[str], None]] = None,
 ) -> list[dict]:
     """Sync all experiences.  Returns list of per-experience result dicts."""
+    from cas_errors import ScraperError
     s, base = ctrl_session()
     exps = cas_api.fetch_experiences(s, base)
+    if not exps:
+        # Empty fetch = parse/fetch failure, never "all experiences gone".
+        # Bail before the deletion reconcile so the cached list is untouched.
+        raise ScraperError(
+            "Couldn't read your experiences from ManageBac — the list page "
+            "came back empty. Try again, or check /api/debug/experiences.")
 
     # Store names and completion status immediately so they survive proposal failures
     cas_db.init_db()
@@ -394,6 +415,25 @@ def ctrl_create_album_bytes(
         lo_ids = ctrl_lo_ids_for(cas_id)
     return cas_api.create_album(s, base, cas_id, csrf, lo_ids, photos,
                                 date=date_str)
+
+
+def ctrl_create_file_evidence(
+    cas_id: int,
+    files: list[tuple[str, bytes]],   # (filename, data)
+    lo_ids: Optional[list[int]] = None,
+    body_html: str = "",
+) -> list[int]:
+    """Upload in-memory files as FileEvidence reflections. Each file becomes its
+    own evidence (FileEvidence holds a single asset). Returns the new rids."""
+    s, base = ctrl_session()
+    csrf = cas_api.get_csrf(s, f"{base}/student/ib/activity/cas")
+    if lo_ids is None:
+        lo_ids = ctrl_lo_ids_for(cas_id)
+    rids: list[int] = []
+    for fname, fdata in files:
+        rids.append(cas_api.create_file_evidence(
+            s, base, cas_id, csrf, lo_ids, fname, fdata, body_html=body_html))
+    return rids
 
 
 def ctrl_get_album_photos(cas_id: int, rid: int) -> list[dict]:
@@ -565,7 +605,7 @@ def ctrl_generate_ai(
     import cas_ai
 
     cfg = ctrl_config()
-    model = cfg.get("ai_model", "claude-opus-4-6")
+    model = cfg.get("ai_model", "deepseek-chat")
     proposal = ctrl_load_proposal(cas_id)
     history = _load_history_for(cas_id) if include_history else None
 
@@ -686,7 +726,7 @@ def ctrl_generate_sa(cas_id: int, question: str, notes: str = "",
     cfg = ctrl_config()
     proposal = ctrl_load_proposal(cas_id)
     history = _load_history_for(cas_id)
-    return cas_ai.ai_generate(notes, cfg.get("ai_model", "claude-opus-4-6"),
+    return cas_ai.ai_generate(notes, cfg.get("ai_model", "deepseek-chat"),
                               proposal=proposal, cfg=cfg, kind="sa_question",
                               existing=existing, history=history,
                               question=question)
@@ -695,11 +735,15 @@ def ctrl_generate_sa(cas_id: int, question: str, notes: str = "",
 # ── Placeholders ──────────────────────────────────────────────────────────────
 
 def ctrl_list_placeholder_queue() -> list[dict]:
-    """All pending placeholder journal reflections across all experiences."""
+    """All pending placeholder journal reflections across active experiences.
+    Completed experiences are locked on ManageBac (their reflections can't be
+    edited anymore) and deleted ones are gone — skip both."""
     cas_db.init_db()
     items = []
     with cas_db.open_db() as conn:
         for exp in cas_db.list_experiences(conn):
+            if exp.get("is_completed") or exp.get("is_deleted"):
+                continue
             cas_id = exp["id"]
             for ph in cas_db.list_reflections(conn, cas_id,
                                               kind="journal", placeholder=True):
@@ -719,6 +763,15 @@ def ctrl_create_placeholder_for(cas_id: int,
     """Create a stealth placeholder for one experience by cloning an existing journal.
     Returns (journal_rid, None).  Falls back to old explicit tag pair if no template."""
     import time as _t
+
+    # Completed experiences are locked on ManageBac — refuse instead of
+    # posting a placeholder the user can never fill.
+    exp = ctrl_get_experience(cas_id)
+    if exp and exp.get("is_completed"):
+        raise RuntimeError(
+            f"Experience {exp.get('name') or cas_id} is completed — "
+            "placeholders can't be created on locked experiences.")
+
     s, base = ctrl_session()
     csrf   = cas_api.get_csrf(s, f"{base}/student/ib/activity/cas")
     lo_ids = ctrl_lo_ids_for(cas_id)

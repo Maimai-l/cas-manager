@@ -7,8 +7,19 @@ const A = window.MONO_ACCENT;
 const N = window.MONO_NEUTRALS;
 const S = window.MONO_STRAND;
 
-const SEP = "1px solid rgba(0,0,0,0.10)";   // column / section separator
+// Cool neutral paper system — solid fills everywhere, a hair off pure white
+// so the side columns read light and clean, not gray and not warm (warm
+// clashes with the chartreuse accent).
+const BG = {
+  sidebar: "#f4f5f6",   // side columns — cool off-white
+  bar:     "#fafbfc",   // toolbars / docks / footers
+  main:    "#ffffff",   // content
+  hover:   "rgba(0,0,0,0.04)",
+  active:  "rgba(0,0,0,0.07)",
+};
+const SEP = "1px solid rgba(0,0,0,0.10)";   // neutral hairline
 const R   = 5;                               // control corner radius
+window.MONO_BG = BG;
 
 // Pull the experience's strand list as a canonical-order array of valid keys.
 // Falls back to ["activity"] if nothing usable is present so the existing
@@ -210,15 +221,21 @@ function Sidebar({ experiences, activeId, onSelect, syncState }) {
   return (
     <div style={{
       width: 230, flexShrink: 0,
-      background: "#f4f4f3",
+      background: BG.sidebar,
       borderRight: SEP,
       display: "flex", flexDirection: "column", overflow: "hidden"
     }}>
-      <div style={{ padding: "10px 10px 8px" }}>
+      {/* 42px header — aligns with the main toolbar + hub header so the top
+          separator is one continuous line across all three columns */}
+      <div style={{
+        height: 42, flexShrink: 0, boxSizing: "border-box",
+        padding: "0 10px", display: "flex", alignItems: "center",
+        borderBottom: SEP,
+      }}>
         <div style={{
-          display: "flex", alignItems: "center", gap: 6,
+          flex: 1, display: "flex", alignItems: "center", gap: 6,
           height: 26, padding: "0 8px",
-          background: "rgba(0,0,0,0.055)",
+          background: "rgba(0,0,0,0.05)",
           borderRadius: R + 1,
           fontSize: 11.5,
         }}>
@@ -236,7 +253,7 @@ function Sidebar({ experiences, activeId, onSelect, syncState }) {
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", padding: "2px 0 10px" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "4px 0 10px" }}>
         {active.map((e) =>
           <SidebarItem key={e.id} exp={e} active={e.id === activeId} onClick={() => onSelect(e.id)} />
         )}
@@ -245,28 +262,25 @@ function Sidebar({ experiences, activeId, onSelect, syncState }) {
             {syncState === "syncing" ? "Syncing experiences…" : "No experiences yet."}
           </div>
         )}
-        {completed.length > 0 && (
-          <div style={{
-            margin: "10px 14px 4px", paddingTop: 8,
-            borderTop: SEP,
-            fontSize: 10.5, color: N.inkSoft
-          }}>Completed</div>
-        )}
+        {completed.length > 0 && <SectionLabel>Completed</SectionLabel>}
         {completed.map((e) =>
           <SidebarItem key={e.id} exp={e} active={e.id === activeId} onClick={() => onSelect(e.id)} />
         )}
-        {deleted.length > 0 && (
-          <div style={{
-            margin: "10px 14px 4px", paddingTop: 8,
-            borderTop: SEP,
-            fontSize: 10.5, color: "#a4332e"
-          }}>Deleted</div>
-        )}
+        {deleted.length > 0 && <SectionLabel danger>Deleted</SectionLabel>}
         {deleted.map((e) =>
           <SidebarItem key={e.id} exp={e} active={e.id === activeId} onClick={() => onSelect(e.id)} />
         )}
       </div>
     </div>);
+}
+
+function SectionLabel({ children, danger }) {
+  return (
+    <div style={{
+      padding: "12px 14px 5px", marginTop: 4,
+      borderTop: SEP,
+      fontSize: 10.5, color: danger ? "#a4332e" : N.inkSoft,
+    }}>{children}</div>);
 }
 
 function SidebarItem({ exp, active, onClick }) {
@@ -286,9 +300,9 @@ function SidebarItem({ exp, active, onClick }) {
       title={isDeleted ? "Not seen in the latest ManageBac sync" : undefined}
       style={{
         display: "flex", alignItems: "center", gap: 9,
-        padding: "7px 10px", borderRadius: R + 1,
-        margin: "1px 6px", cursor: "pointer",
-        background: active ? "rgba(0,0,0,0.08)" : "transparent",
+        padding: "8px 12px", cursor: "pointer",
+        background: active ? BG.active : "transparent",
+        boxShadow: active ? ("inset 2px 0 0 0 " + A.solid) : "none",
         opacity: isDeleted ? 0.5 : 1,
         transition: "background 0.12s, opacity 0.12s"
       }}>
@@ -324,32 +338,43 @@ const _TOOLBAR_BTN_STYLE = {
 };
 
 function Toolbar({ dotKind, onOpenSettings, children }) {
+  const ctx = React.useContext(window.MonoCtx);
+  const syncing = ctx.syncState === "syncing";
   const dotColor =
     dotKind === "green"  ? "#8bc34a" :
     dotKind === "yellow" ? "#e7c64a" : "#d8504a";
   const dotLabel =
+    syncing              ? "Syncing…" :
     dotKind === "green"  ? "Online" :
     dotKind === "yellow" ? "Syncing" : "Offline";
   return (
     <div style={{
       height: 42, flexShrink: 0,
       display: "flex", alignItems: "center", gap: 8,
-      padding: "0 14px",
+      // Left content aligns with the header title + reflection rows (22px);
+      // a little less on the right so the settings button sits near the edge.
+      padding: "0 16px 0 22px",
       borderBottom: SEP,
-      background: "#fafafa",
+      background: BG.bar,
     }}>
-      <span
-        title={`Status: ${dotLabel}`}
+      <button
+        className="mono-tray"
+        onClick={() => { if (!syncing && ctx.bootSync) ctx.bootSync(); }}
+        disabled={syncing}
+        title={syncing ? "Syncing…" : "Click to re-sync from ManageBac"}
         style={{
           display: "inline-flex", alignItems: "center", gap: 6,
+          height: 26, padding: "0 9px", borderRadius: R,
+          border: "none", background: "transparent",
           fontSize: 11, color: N.inkMid, flexShrink: 0,
+          cursor: syncing ? "default" : "pointer", fontFamily: "inherit",
         }}>
         <span style={{
           width: 8, height: 8, borderRadius: "50%",
           background: dotColor,
         }} />
         {dotLabel}
-      </span>
+      </button>
       <div style={{ flex: 1 }} />
       {children}
       <button
@@ -366,13 +391,13 @@ function Toolbar({ dotKind, onOpenSettings, children }) {
 // ── Main panel ──────────────────────────────────────────────────────────
 function MainPanel({
   activeExp, reflections, reflLoading,
-  onOpenJournal, onOpenPhotos, onEditRefl, onSyncOne,
+  onOpenJournal, onEditRefl, onSyncOne,
   onOpenSettings, onOpenPlaceholders, pendingCount,
   dangerZone, onDeleteRefl, appState, dotKind
 }) {
   const frame = {
     flex: 1, minWidth: 0,
-    background: "#fff",
+    background: BG.main,
     display: "flex", flexDirection: "column", overflow: "hidden",
   };
 
@@ -382,9 +407,9 @@ function MainPanel({
         <Toolbar dotKind={dotKind} onOpenSettings={onOpenSettings} />
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ textAlign: "center", maxWidth: 360, color: N.inkMid, padding: 24 }}>
-            <div style={{ fontSize: 15, fontWeight: 500, color: N.inkDeep, marginBottom: 6 }}>Not logged into ManageBac</div>
+            <div style={{ fontSize: 15, fontWeight: 500, color: N.inkDeep, marginBottom: 6 }}>Not logged in</div>
             <div style={{ fontSize: 12, lineHeight: 1.55 }}>
-              Open Settings (⚙ top right) → Account, enter your ManageBac credentials, and your data will sync.
+              Log in from Settings to sync your experiences.
             </div>
           </div>
         </div>
@@ -413,10 +438,7 @@ function MainPanel({
             Completed · read-only
           </Pill>
         ) : (
-          <React.Fragment>
-            <Btn icon="pen"   onClick={onOpenJournal}>+ New Entry</Btn>
-            <Btn icon="image" onClick={onOpenPhotos}>+ New Photo</Btn>
-          </React.Fragment>
+          <Btn icon="pen" onClick={onOpenJournal}>+ New Entry</Btn>
         )}
       </Toolbar>
 
@@ -424,6 +446,7 @@ function MainPanel({
       <div style={{
         padding: "14px 22px 12px",
         borderBottom: SEP,
+        background: BG.main,
         flexShrink: 0,
       }}>
         <h2 style={{
@@ -452,8 +475,10 @@ function MainPanel({
         </div>
       </div>
 
-      {/* Reflection rows — flat, joined with hairlines (no floating cards) */}
-      <div style={{ flex: 1, overflow: "auto" }}>
+      {/* Reflection rows — flat, joined with hairlines (no floating cards).
+          Keyed by experience so switching fades the new list in (and resets
+          scroll to the top). */}
+      <div key={activeExp.id} className="mono-fade" style={{ flex: 1, overflow: "auto" }}>
         {reflLoading ? (
           <div style={{ color: N.inkSoft, fontSize: 11, padding: "12px 22px" }}>Loading reflections…</div>
         ) : null}
@@ -505,10 +530,14 @@ function RowBtn({ icon, label, onClick, danger, title, width = 62 }) {
 
 function ReflRow({ refl, casId, onEdit, dangerZone, onDelete, onPhotoError }) {
   const isAlbum  = refl.kind === "album";
+  const isFile   = refl.kind === "file";
   const photos   = refl.photo_list || [];
+  const files    = refl.file_list || [];
   const dateStr  = refl.date_iso || refl.group_date || "";
   const subline  = isAlbum
     ? `Photos · ${photos.length}`
+    : isFile
+    ? (files.length > 1 ? `Files · ${files.length}` : "File")
     : (refl.kind === "journal" ? "Journal entry" : (refl.kind || "entry"));
   const editable = refl.kind === "journal" || refl.kind === "album";
   const copyable = !isAlbum && !!(refl.body_text || refl.body_html);
@@ -536,7 +565,7 @@ function ReflRow({ refl, casId, onEdit, dangerZone, onDelete, onPhotoError }) {
         }} />
       ) : null}
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 22px 6px" }}>
-        <I name={isAlbum ? "image" : "pen"} size={13} stroke={1.6}
+        <I name={isAlbum ? "image" : isFile ? "file" : "pen"} size={13} stroke={1.6}
            style={{ color: N.inkSoft, flexShrink: 0 }} />
         <span className="tnum" style={{ fontSize: 12, fontWeight: 500, color: N.inkDeep, flexShrink: 0 }}>
           {dateStr || "—"}
@@ -576,6 +605,22 @@ function ReflRow({ refl, casId, onEdit, dangerZone, onDelete, onPhotoError }) {
             (empty album — try Sync)
           </div>
         )
+      ) : isFile ? (
+        files.length ? (
+          <div style={{ padding: "2px 22px 12px", display: "flex", flexDirection: "column", gap: 5 }}>
+            {files.map((f, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <I name="file" size={13} stroke={1.6} style={{ color: N.inkSoft, flexShrink: 0 }} />
+                <span style={{ fontSize: 12.5, fontWeight: 500, color: N.inkDeep }}>{f.name}</span>
+                {f.size ? <span style={{ fontSize: 11, color: N.inkSoft }}>{f.size}</span> : null}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ padding: "0 22px 10px", fontSize: 11.5, color: N.inkSoft, fontStyle: "italic" }}>
+            (file attachment)
+          </div>
+        )
       ) : (
         refl.body_html ? (
           <div style={{
@@ -609,7 +654,7 @@ function AppShell(props) {
       width: "100%", height: "100%",
       display: "flex", alignItems: "stretch",
       overflow: "hidden",
-      background: "#fff"
+      background: BG.main
     }}>
       <Sidebar
         experiences={props.experiences}
@@ -622,7 +667,6 @@ function AppShell(props) {
         reflections={props.reflections}
         reflLoading={props.reflLoading}
         onOpenJournal={props.onOpenJournal}
-        onOpenPhotos={props.onOpenPhotos}
         onEditRefl={props.onEditRefl}
         onSyncOne={ctx.syncOne}
         onOpenSettings={props.onOpenSettings}

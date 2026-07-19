@@ -1,15 +1,12 @@
-// ── Mono modals — Journal, Photos, Edit Photos, AI Generate ─────────────
+// ── Shared modal/dock primitives ────────────────────────────────────────
+// The journal / AI / SA / photos flows all live in the flat bottom Composer
+// (mono-composer.jsx). This file only holds the reusable pieces they share:
+// status line, async hook, HTML helpers, and the photo dropzone.
 const I = window.I;
 const A = window.MONO_ACCENT;
 const N = window.MONO_NEUTRALS;
-const ModalShell = window.MonoModalShell;
-const FieldLabel = window.MonoFieldLabel;
-const FieldShell = window.MonoFieldShell;
-const Btn = window.MonoBtn;
-const PhotoThumb = window.MonoPhotoThumb;
-const API = window.API;
 
-// ── Shared error / loading bar (rendered inside ModalShell body) ────────
+// ── Shared error / loading bar ──────────────────────────────────────────
 function StatusLine({ loading, error, hint }) {
   if (!loading && !error && !hint) return null;
   return (
@@ -46,12 +43,19 @@ function useAsyncOp() {
   return { loading, error, run, clearError: () => setError(null) };
 }
 
-// Plain text → <p> HTML
+// Plain text → ManageBac redactor HTML. Blank lines split paragraphs; single
+// newlines within a paragraph become <br> (matching how ManageBac stores
+// journals) so hand-typed line breaks survive the round-trip. Content is
+// escaped so stray <, >, & don't corrupt the markup.
 function _wrapPlainAsHtml(text) {
-  const t = (text || "").trim();
+  const t = (text || "").replace(/\r\n?/g, "\n").trim();
   if (!t) return "";
   if (t.startsWith("<")) return t;
-  return t.split(/\n+/).filter((l) => l.trim()).map((l) => `<p>${l.trim()}</p>`).join("");
+  const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return t.split(/\n{2,}/).map((para) => {
+    const inner = para.split("\n").map((l) => l.trim()).filter(Boolean).map(esc).join("<br>");
+    return inner ? `<p>${inner}</p>` : "";
+  }).filter(Boolean).join("");
 }
 
 // Strip HTML tags (for display in textarea)
@@ -61,96 +65,7 @@ function _stripHtml(html) {
   return d.textContent || d.innerText || "";
 }
 
-// ── New Photos — drag-and-drop ──────────────────────────────────────────
-// (The journal + AI flows live in mono-composer.jsx — flat, non-modal.)
-function NewPhotosModal() {
-  const ctx = React.useContext(window.MonoCtx);
-  const exp = ctx.activeExp;
-  const strand = (exp && exp.strand) || "activity";
-  const expName = (exp && exp.name) || (exp && `Experience ${exp.id}`) || "Experience";
-
-  const [caption, setCaption] = React.useState("");
-  const [files, setFiles]     = React.useState([]); // File[]
-  const [dragging, setDragging] = React.useState(false);
-  const fileRef = React.useRef(null);
-  const { loading, error, run } = useAsyncOp();
-
-  function addFiles(fs) {
-    const imgs = Array.from(fs || []).filter((f) => f.type && f.type.startsWith("image/"));
-    if (imgs.length) setFiles((prev) => [...prev, ...imgs]);
-  }
-
-  function removeAt(idx) {
-    setFiles((prev) => prev.filter((_, i) => i !== idx));
-  }
-
-  function totalSize() {
-    const bytes = files.reduce((acc, f) => acc + (f.size || 0), 0);
-    return (bytes / 1024 / 1024).toFixed(1) + " MB";
-  }
-
-  async function handleUpload() {
-    if (!files.length || !exp) return;
-    const captions = files.map(() => caption);
-    await run(`Uploading ${files.length} photo${files.length > 1 ? "s" : ""}…`, async () => {
-      await API.createAlbum(exp.id, files, captions, null, null);
-      await ctx.refreshAfterMutation();
-      ctx.close();
-    });
-  }
-
-  return (
-    <ModalShell title={`New Photos — ${expName}`} width={620}
-      footer={<>
-        <Btn onClick={ctx.close} disabled={!!loading}>Cancel</Btn>
-        <Btn primary onClick={handleUpload} disabled={!!loading || !files.length}>
-          {files.length ? `Upload ${files.length} photo${files.length > 1 ? "s" : ""}` : "Upload"}
-        </Btn>
-      </>}>
-      <div>
-        <FieldLabel hint="applied to every uploaded photo">Caption (optional)</FieldLabel>
-        <FieldShell style={{ padding: 0 }}>
-          <input
-            value={caption}
-            onChange={(e) => setCaption(e.target.value)}
-            placeholder="e.g. Week 3 · Field practice"
-            style={{
-              width: "100%", padding: "8px 11px", border: "none", outline: "none",
-              background: "transparent", fontSize: 12.5,
-              color: N.inkDeep, fontFamily: "inherit"
-            }}
-          />
-        </FieldShell>
-      </div>
-
-      <Dropzone
-        files={files}
-        dragging={dragging}
-        totalSize={totalSize()}
-        onPick={() => fileRef.current && fileRef.current.click()}
-        onDragOver={(e) => { e.preventDefault(); if (!dragging) setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragging(false);
-          addFiles(e.dataTransfer.files);
-        }}
-        onRemove={removeAt}
-      />
-      <input
-        ref={fileRef}
-        type="file" accept="image/*" multiple
-        style={{ display: "none" }}
-        onChange={(e) => {
-          addFiles(e.target.files);
-          e.target.value = "";
-        }}
-      />
-
-      <StatusLine loading={loading} error={error} />
-    </ModalShell>);
-}
-
+// ── Photo dropzone (used by the Composer's Photos type) ─────────────────
 function Dropzone({ files, dragging, totalSize, onPick, onDragOver, onDragLeave, onDrop, onRemove }) {
   const filled = files.length > 0;
   return (
@@ -159,13 +74,13 @@ function Dropzone({ files, dragging, totalSize, onPick, onDragOver, onDragLeave,
       onDragLeave={onDragLeave}
       onDrop={onDrop}
       style={{
-        borderRadius: 11, padding: filled ? 14 : 28,
-        background: dragging ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.6)",
+        borderRadius: 5, padding: filled ? 14 : 24,
+        background: dragging ? "rgba(0,0,0,0.045)" : "#fff",
         boxShadow: dragging
           ? `inset 0 0 0 2px ${A.solid}`
-          : "inset 0 0 0 1px rgba(0,0,0,0.1)",
+          : "inset 0 0 0 1px rgba(0,0,0,0.12)",
         backgroundImage: !filled && !dragging
-          ? `repeating-linear-gradient(45deg, transparent 0 6px, rgba(0,0,0,0.04) 6px 12px)`
+          ? `repeating-linear-gradient(45deg, transparent 0 6px, rgba(0,0,0,0.035) 6px 12px)`
           : "none",
         transition: "all 0.15s"
       }}>
@@ -200,20 +115,20 @@ function Dropzone({ files, dragging, totalSize, onPick, onDragOver, onDragLeave,
           onClick={onPick}
           style={{
             textAlign: "center", display: "flex", flexDirection: "column",
-            alignItems: "center", gap: 10, cursor: "pointer"
+            alignItems: "center", gap: 8, cursor: "pointer"
           }}>
           <div style={{
-            width: 48, height: 48, borderRadius: 12,
-            background: dragging ? A.solid : "rgba(255,255,255,0.85)",
+            width: 42, height: 42, borderRadius: 5,
+            background: dragging ? A.solid : "#fff",
             color: dragging ? A.onAccent : N.ink,
             display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: dragging ? "none" : "inset 0 0 0 0.5px rgba(0,0,0,0.08)",
+            boxShadow: dragging ? "none" : "inset 0 0 0 1px rgba(0,0,0,0.12)",
             transform: dragging ? "scale(1.08)" : "scale(1)",
             transition: "all 0.15s"
           }}>
-            <I name="upload" size={24} stroke={1.5} />
+            <I name="upload" size={20} stroke={1.5} />
           </div>
-          <div style={{ fontSize: 13.5, fontWeight: 500, color: N.inkDeep }}>
+          <div style={{ fontSize: 12.5, fontWeight: 500, color: N.inkDeep }}>
             {dragging ? "Drop photos to add" : "Drag photos here"}
           </div>
           <div style={{ fontSize: 11, color: N.inkSoft }}>
@@ -237,10 +152,9 @@ function FilePreview({ file, onRemove }) {
     <div style={{ position: "relative" }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         <div style={{
-          width: 92, height: 68, borderRadius: 8,
+          width: 92, height: 68, borderRadius: 5,
           background: "linear-gradient(135deg,#3a3a3a,#1a1a1a)",
           overflow: "hidden",
-          boxShadow: "inset 0 0 0 0.5px rgba(255,255,255,0.15)"
         }}>
           {url && <img src={url} alt={file.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
         </div>
@@ -264,7 +178,7 @@ function DeleteChip({ onClick }) {
         color: "#fff",
         display: "flex", alignItems: "center", justifyContent: "center",
         cursor: "pointer",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.2), inset 0 0 0 0.5px rgba(255,255,255,0.15)"
+        boxShadow: "0 1px 3px rgba(0,0,0,0.2)"
       }}>
       <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
         <path d="M6 6 18 18M18 6 6 18" />
@@ -272,127 +186,13 @@ function DeleteChip({ onClick }) {
     </div>);
 }
 
-// ── 3. Edit Photos — existing album, add or remove ──────────────────────
-function EditPhotosModal() {
-  const ctx = React.useContext(window.MonoCtx);
-  const rid    = ctx.modalPayload && ctx.modalPayload.rid;
-  const casId  = ctx.modalPayload && ctx.modalPayload.casId;
-  const date   = (ctx.modalPayload && ctx.modalPayload.refl && (ctx.modalPayload.refl.date_iso || ctx.modalPayload.refl.group_date)) || "";
-  const [photos, setPhotos] = React.useState([]);
-  const [newFiles, setNewFiles] = React.useState([]);
-  const [newCaption, setNewCaption] = React.useState("");
-  const [dragging, setDragging] = React.useState(false);
-  const fileRef = React.useRef(null);
-  const { loading: listLoading, error: listError, run: listRun } = useAsyncOp();
-  const { loading: opLoading, error: opError, run: opRun } = useAsyncOp();
-
-  const reload = React.useCallback(async () => {
-    if (!rid || !casId) return;
-    await listRun("Loading photos…", async () => {
-      const ps = await API.albumPhotos(rid, casId);
-      setPhotos(ps || []);
-    });
-  }, [rid, casId, listRun]);
-
-  React.useEffect(() => { reload(); }, [reload]);
-
-  async function deleteOne(photoId) {
-    if (!window.confirm("Delete this photo from ManageBac?")) return;
-    await opRun("Deleting…", async () => {
-      await API.deletePhoto(rid, photoId, casId);
-      await reload();
-    });
-  }
-
-  function addFiles(fs) {
-    const imgs = Array.from(fs || []).filter((f) => f.type && f.type.startsWith("image/"));
-    if (imgs.length) setNewFiles((prev) => [...prev, ...imgs]);
-  }
-
-  async function uploadNew() {
-    if (!newFiles.length) return;
-    await opRun(`Uploading ${newFiles.length}…`, async () => {
-      await API.addPhotos(rid, casId, newFiles, newCaption);
-      setNewFiles([]); setNewCaption("");
-      await reload();
-      await ctx.refreshAfterMutation();
-    });
-  }
-
-  return (
-    <ModalShell title={`Edit Photos · ${date || "Album"}`} width={620}
-      footer={<>
-        <Btn onClick={ctx.close} disabled={!!opLoading}>Close</Btn>
-        <Btn primary onClick={uploadNew} disabled={!!opLoading || !newFiles.length}>
-          {newFiles.length ? `Upload ${newFiles.length}` : "Upload"}
-        </Btn>
-      </>}>
-      <FieldLabel hint={`${photos.length} photo${photos.length === 1 ? "" : "s"}`}>Existing photos</FieldLabel>
-      <div style={{
-        padding: "12px",
-        background: "rgba(255,255,255,0.6)",
-        borderRadius: 11,
-        boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.06)"
-      }}>
-        {listLoading && <div style={{ fontSize: 11, color: N.inkSoft }}>{listLoading}</div>}
-        {!listLoading && !photos.length && (
-          <div style={{ fontSize: 11, color: N.inkSoft }}>No photos in this album.</div>
-        )}
-        {!!photos.length && (
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {photos.map((p) =>
-              <div key={p.id} style={{ position: "relative" }}>
-                <PhotoThumb url={p.s3_url} caption={p.caption} w={92} h={68} />
-                <DeleteChip onClick={() => deleteOne(p.id)} />
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-      <StatusLine error={listError} />
-
-      <FieldLabel hint="optional">Caption for new photos</FieldLabel>
-      <FieldShell style={{ padding: 0 }}>
-        <input
-          value={newCaption}
-          onChange={(e) => setNewCaption(e.target.value)}
-          placeholder="e.g. Cool-down stretch"
-          style={{
-            width: "100%", padding: "8px 11px", border: "none", outline: "none",
-            background: "transparent", fontSize: 12.5,
-            color: N.inkDeep, fontFamily: "inherit"
-          }}
-        />
-      </FieldShell>
-
-      <Dropzone
-        files={newFiles}
-        dragging={dragging}
-        totalSize={`${(newFiles.reduce((a, f) => a + f.size, 0) / 1024 / 1024).toFixed(1)} MB`}
-        onPick={() => fileRef.current && fileRef.current.click()}
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files); }}
-        onRemove={(i) => setNewFiles((prev) => prev.filter((_, j) => j !== i))}
-      />
-      <input
-        ref={fileRef}
-        type="file" accept="image/*" multiple
-        style={{ display: "none" }}
-        onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }}
-      />
-
-      <StatusLine loading={opLoading} error={opError} />
-    </ModalShell>);
-}
-
-window.NewPhotosModal_Mono = NewPhotosModal;
-window.EditPhotosModal_Mono = EditPhotosModal;
-
 // Shared UI helpers — also used by mono-composer.jsx (loaded after this file)
 window.MonoHelpers = {
   StatusLine,
   useAsyncOp,
   wrapPlainAsHtml: _wrapPlainAsHtml,
   stripHtml: _stripHtml,
+  Dropzone,
+  FilePreview,
+  DeleteChip,
 };

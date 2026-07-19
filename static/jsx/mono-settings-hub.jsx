@@ -12,56 +12,59 @@ const StrandTag = window.MonoStrandTag;
 const API = window.API;
 const HUB_SEP = window.MONO_SEP || "1px solid rgba(0,0,0,0.10)";
 
-// ── Settings ───────────────────────────────────────────────────────────
-function SettingsModal({ tab = "account", onTab }) {
+// ── Settings — full-page inline panel, everything laid out at once ──────
+function SettingsModal() {
   const ctx = React.useContext(window.MonoCtx);
+  const BG = window.MONO_BG;
+  const col = { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 22 };
   return (
-    <ModalShell title="Settings" width={720}
-      footer={<><Btn onClick={ctx.close}>Done</Btn></>}
-      bodyStyle={{ padding: 0 }}>
-      <div style={{ display: "flex", height: 480, marginTop: -4 }}>
-        <div style={{
-          width: 160, padding: "14px 8px",
-          background: "rgba(0,0,0,0.02)",
-          borderRight: "0.5px solid " + N.hairline,
-          display: "flex", flexDirection: "column", gap: 2
+    <div className="mono-fade" style={{
+      position: "absolute", inset: 0, zIndex: 40,
+      background: BG.main,
+      display: "flex", flexDirection: "column",
+    }}>
+      {/* 42px header — matches the app toolbars; close on the right */}
+      <div style={{
+        height: 42, flexShrink: 0, boxSizing: "border-box",
+        padding: "0 12px 0 16px", borderBottom: HUB_SEP,
+        display: "flex", alignItems: "center", gap: 8,
+        background: BG.bar,
+      }}>
+        <I name="settings" size={14} stroke={1.7} style={{ color: N.inkMid }} />
+        <span style={{ fontSize: 12.5, fontWeight: 500, color: N.inkDeep }}>Settings</span>
+        <div style={{ flex: 1 }} />
+        <button onClick={ctx.close} className="mono-close" title="Close settings" style={{
+          width: 24, height: 24, borderRadius: "50%", border: "none",
+          background: "rgba(0,0,0,0.06)", color: "rgba(20,20,20,0.65)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer", fontFamily: "inherit",
         }}>
-          <SettingsTab icon="user"     label="Account"  active={tab === "account"}  onClick={() => onTab && onTab("account")} />
-          <SettingsTab icon="sparkle"  label="AI"       active={tab === "ai"}       onClick={() => onTab && onTab("ai")} />
-          <SettingsTab icon="pen"      label="Prompts"  active={tab === "prompts"}  onClick={() => onTab && onTab("prompts")} />
-          <SettingsTab icon="settings" label="General"  active={tab === "general"}  onClick={() => onTab && onTab("general")} />
-          <SettingsTab icon="trash"    label="Danger"   active={tab === "danger"}   onClick={() => onTab && onTab("danger")} />
-        </div>
+          <I name="close" size={11} stroke={2} />
+        </button>
+      </div>
 
-        <div style={{ flex: 1, padding: "18px 22px", display: "flex", flexDirection: "column", gap: 18, overflow: "auto" }}>
-          {tab === "account" && <AccountPane />}
-          {tab === "ai"      && <AIProviderPane />}
-          {tab === "prompts" && <PromptsPane />}
-          {tab === "general" && <GeneralPane />}
-          {tab === "danger"  && <DangerPane />}
+      {/* Everything at once — two columns, no tab switching */}
+      <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: "22px 26px" }}>
+        <div style={{ display: "flex", gap: 40, alignItems: "flex-start", maxWidth: 1120, margin: "0 auto" }}>
+          <div style={col}>
+            <AccountPane />
+            <Divider />
+            <AIProviderPane />
+            <Divider />
+            <GeneralPane />
+            <Divider />
+            <DangerPane />
+          </div>
+          <div style={{ ...col, borderLeft: HUB_SEP, paddingLeft: 40 }}>
+            <PromptsPane />
+          </div>
         </div>
       </div>
-    </ModalShell>);
+    </div>);
 }
 
-function SettingsTab({ icon, label, active, onClick }) {
-  return (
-    <div
-      onClick={onClick}
-      className="mono-settings-tab"
-      style={{
-        display: "flex", alignItems: "center", gap: 9,
-        padding: "7px 10px", borderRadius: 7,
-        fontSize: 12, fontWeight: 500,
-        color: active ? N.inkDeep : N.inkMid,
-        background: active ? "rgba(255,255,255,0.8)" : "transparent",
-        boxShadow: active ? "inset 0 0 0 0.5px rgba(0,0,0,0.08)" : "none",
-        cursor: "pointer",
-        transition: "background 0.12s"
-      }}>
-      <I name={icon} size={13} stroke={1.7} />
-      <span>{label}</span>
-    </div>);
+function Divider() {
+  return <div style={{ height: 1, background: "rgba(0,0,0,0.10)" }} />;
 }
 
 // ── Account: login or re-login ─────────────────────────────────────────
@@ -71,20 +74,13 @@ function AccountPane() {
   const baseUrl  = (ctx.config && ctx.config.base) || "";
   return (
     <>
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep, marginBottom: 2 }}>
-          ManageBac connection
-        </div>
-        <div style={{ fontSize: 11, color: N.inkMid, lineHeight: 1.5 }}>
-          Log in using your ManageBac email and password; CAS Manager will automatically renew the session in the background.
-        </div>
-      </div>
+      <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep }}>Account</div>
 
       {/* Show the configured URL only after login succeeds — the login form
           below has its own URL field for the first-time / re-login flow. */}
       {loggedIn && baseUrl && (
         <div>
-          <FieldLabel hint="Loaded from cas_config.json">School base URL</FieldLabel>
+          <FieldLabel>School URL</FieldLabel>
           <FieldShell mono>{baseUrl}</FieldShell>
         </div>
       )}
@@ -100,13 +96,13 @@ function LoggedInBlock() {
   return (
     <div style={{
       padding: "12px 14px",
-      background: "rgba(255,255,255,0.6)",
-      borderRadius: 10,
-      boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.06)",
+      background: "#fff",
+      borderRadius: 0,
+      boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
       display: "flex", alignItems: "center", gap: 12
     }}>
       <div style={{
-        width: 36, height: 36, borderRadius: 9,
+        width: 36, height: 36, borderRadius: 5,
         background: A.solid, color: A.onAccent,
         display: "flex", alignItems: "center", justifyContent: "center"
       }}>
@@ -162,14 +158,12 @@ function LoginForm({ onCancel }) {
   return (
     <div style={{
       padding: "14px 14px 12px",
-      background: "rgba(255,255,255,0.6)",
-      borderRadius: 10,
-      boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.06)",
+      background: "#f6f7f8",
+      borderRadius: 0,
+      boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
       display: "flex", flexDirection: "column", gap: 10
     }}>
-      <FieldLabel hint="In the form of https://<school>.managebac.cn / .com / .org">
-       School ManageBac URL
-      </FieldLabel>
+      <FieldLabel>School URL</FieldLabel>
       <FieldShell style={{ padding: 0 }}>
         <input
           type="url"
@@ -213,13 +207,8 @@ function LoginForm({ onCancel }) {
       <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", marginTop: 4 }}>
         {onCancel && <Btn onClick={onCancel} disabled={loading}>Cancel</Btn>}
         <Btn primary onClick={doLogin} disabled={loading}>
-          {loading ? "Logging in…" : "login"}
+          {loading ? "Logging in…" : "Log in"}
         </Btn>
-      </div>
-      <div style={{ fontSize: 10.5, color: N.inkSoft, lineHeight: 1.5, marginTop: 4 }}>
-        Credentials are stored only on this computer (mb_state.json) so the app can
-        re-login automatically when the session expires — you won't need to type them again.
-        The school URL is saved to the configuration after a successful login.
       </div>
     </div>);
 }
@@ -236,6 +225,7 @@ function AIProviderPane() {
   const ctx = React.useContext(window.MonoCtx);
   const provider = (ctx.config && ctx.config.ai_provider) || "prompt";
   const model    = (ctx.config && ctx.config.ai_model) || "";
+  const apiKey   = (ctx.config && ctx.config.deepseek_api_key) || "";
   const ollamaModel  = (ctx.config && ctx.config.ollama_model) || "";
   const ollamaUrl    = (ctx.config && ctx.config.ollama_url) || "";
   const [saving, setSaving] = React.useState(false);
@@ -250,38 +240,45 @@ function AIProviderPane() {
 
   return (
     <>
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep, marginBottom: 2 }}>
-          AI provider
-        </div>
-        <div style={{ fontSize: 11, color: N.inkMid }}>
-          Choose how to generate reflections from your rough notes.
-        </div>
-      </div>
+      <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep }}>AI provider</div>
 
       <div style={{ display: "flex", gap: 8 }}>
-        <ProviderCard active={provider === "prompt"}    onClick={() => patch({ ai_provider: "prompt" })}
-          name="Prompt"     sub="Copy & paste — works with any AI" icon="copy" />
-        <ProviderCard active={provider === "ollama"}    onClick={() => patch({ ai_provider: "ollama" })}
-          name="Ollama"     sub="Local model on your Mac" icon="cpu" />
-        <ProviderCard active={provider === "anthropic"} onClick={() => patch({ ai_provider: "anthropic" })}
-          name="Anthropic"  sub="Claude API (ANTHROPIC_API_KEY)" icon="cloud" />
+        <ProviderCard active={provider === "prompt"}   onClick={() => patch({ ai_provider: "prompt" })}
+          name="Prompt"   icon="copy" />
+        <ProviderCard active={provider === "deepseek"} onClick={() => patch({ ai_provider: "deepseek" })}
+          name="DeepSeek" icon="cloud" />
+        <ProviderCard active={provider === "ollama"}   onClick={() => patch({ ai_provider: "ollama" })}
+          name="Ollama"   icon="cpu" />
       </div>
 
       <div>
-        <FieldLabel>Anthropic model</FieldLabel>
+        <FieldLabel>DeepSeek API key</FieldLabel>
         <FieldShell mono style={{ padding: 0 }}>
           <input
-            value={model}
-            onChange={(e) => ctx.updateConfig({ ai_model: e.target.value }).catch((err) => setError(err.message))}
-            placeholder="claude-opus-4-6"
+            type="password"
+            value={apiKey}
+            onChange={(e) => ctx.updateConfig({ deepseek_api_key: e.target.value }).catch((err) => setError(err.message))}
+            placeholder="sk-…"
+            autoComplete="off"
             style={inputStyle}
           />
         </FieldShell>
       </div>
 
       <div>
-        <FieldLabel hint="for ollama provider">Ollama model · URL</FieldLabel>
+        <FieldLabel>DeepSeek model</FieldLabel>
+        <FieldShell mono style={{ padding: 0 }}>
+          <input
+            value={model}
+            onChange={(e) => ctx.updateConfig({ ai_model: e.target.value }).catch((err) => setError(err.message))}
+            placeholder="deepseek-chat"
+            style={inputStyle}
+          />
+        </FieldShell>
+      </div>
+
+      <div>
+        <FieldLabel>Ollama model · URL</FieldLabel>
         <div style={{ display: "flex", gap: 8 }}>
           <FieldShell mono style={{ padding: 0, flex: 1 }}>
             <input
@@ -300,10 +297,6 @@ function AIProviderPane() {
             />
           </FieldShell>
         </div>
-      </div>
-
-      <div style={{ fontSize: 10.5, color: N.inkSoft, lineHeight: 1.5 }}>
-        Want to customize the AI's writing style, word limit, required LOs to cover, etc.？Open the <b>Prompts</b> tab.
       </div>
 
       {saving && <div style={{ fontSize: 11, color: N.inkMid }}>Saving…</div>}
@@ -344,16 +337,7 @@ function PromptsPane() {
 
   return (
     <>
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep, marginBottom: 2 }}>
-          System prompts
-        </div>
-        <div style={{ fontSize: 11, color: N.inkMid, lineHeight: 1.55 }}>
-          Each prompt determines all AI behavior in the corresponding scenario. Click a prompt to expand and edit.
-          <b>Reset</b> Will delete your custom version and restore the built-in default. 
-          Each time you generate, the current experience's proposal and LO list will be automatically appended at the end.
-        </div>
-      </div>
+      <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep }}>System prompts</div>
 
       {loading && <div style={{ fontSize: 11.5, color: N.inkMid }}>Loading…</div>}
       {error  && <div style={{ fontSize: 11.5, color: "#a4332e" }}>⚠ {error}</div>}
@@ -431,9 +415,9 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
 
   return (
     <div style={{
-      borderRadius: 9,
-      background: "rgba(255,255,255,0.65)",
-      boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.06)",
+      borderRadius: 0,
+      background: "#fff",
+      boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
       overflow: "hidden",
       transition: "background 0.12s"
     }}>
@@ -474,7 +458,7 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
 
       {open && (
         <div style={{ padding: "0 12px 12px", display: "flex", flexDirection: "column", gap: 10,
-                      borderTop: "0.5px solid " + N.hairline }}>
+                      borderTop: HUB_SEP }}>
           <div style={{ fontSize: 11, color: N.inkMid, lineHeight: 1.55, marginTop: 10 }}>
             {data.description}
           </div>
@@ -485,7 +469,7 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
               onClick={() => setShowDefault(!showDefault)}
               style={{
                 fontSize: 11, fontWeight: 500, color: N.ink,
-                padding: "4px 9px", borderRadius: 6,
+                padding: "4px 9px", borderRadius: 5,
                 background: "rgba(0,0,0,0.04)", border: "none",
                 cursor: "pointer", fontFamily: "inherit",
                 display: "inline-flex", alignItems: "center", gap: 5
@@ -497,9 +481,9 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
             {showDefault && (
               <div style={{
                 marginTop: 6, padding: "10px 12px",
-                background: "rgba(0,0,0,0.025)",
-                borderRadius: 7,
-                boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.06)",
+                background: "#f6f7f8",
+                borderRadius: 0,
+                boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
                 fontSize: 11.5, lineHeight: 1.55,
                 color: N.inkMid,
                 whiteSpace: "pre-wrap", wordBreak: "break-word",
@@ -512,12 +496,12 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
               style={{
                 marginTop: 6,
                 fontSize: 10.5, fontWeight: 500, color: N.ink,
-                padding: "3px 8px", borderRadius: 6,
-                background: "rgba(255,255,255,0.85)", border: "none",
-                boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.08)",
+                padding: "3px 8px", borderRadius: 5,
+                background: "#fff", border: "none",
+                boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)",
                 cursor: "pointer", fontFamily: "inherit"
               }}>
-              Copy default → editor
+              Copy default
             </button>
           </div>
 
@@ -552,13 +536,13 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
               disabled={saving || !data.is_customized}
               title={data.is_customized ? "Delete override, fall back to built-in default" : "Already using default"}
               style={{
-                padding: "6px 14px", borderRadius: 7, border: "none",
+                padding: "6px 14px", borderRadius: 5, border: "none",
                 background: "rgba(216,80,74,0.08)",
                 color: "#a4332e",
                 fontSize: 11.5, fontWeight: 500,
                 cursor: (saving || !data.is_customized) ? "default" : "pointer",
                 opacity: (saving || !data.is_customized) ? 0.4 : 1,
-                boxShadow: "inset 0 0 0 0.5px rgba(216,80,74,0.25)",
+                boxShadow: "inset 0 0 0 1px rgba(216,80,74,0.3)",
                 fontFamily: "inherit"
               }}>
               Reset to default
@@ -571,13 +555,13 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
               onClick={save}
               disabled={saving || !dirty}
               style={{
-                padding: "6px 14px", borderRadius: 7, border: "none",
-                background: dirty ? A.solid : "rgba(255,255,255,0.85)",
+                padding: "6px 14px", borderRadius: 5, border: "none",
+                background: dirty ? A.solid : "#fff",
                 color: dirty ? A.onAccent : N.ink,
                 fontWeight: 500, fontSize: 11.5,
                 cursor: (saving || !dirty) ? "default" : "pointer",
                 opacity: (saving || !dirty) ? 0.5 : 1,
-                boxShadow: dirty ? A.shadow : "inset 0 0 0 0.5px rgba(0,0,0,0.08)",
+                boxShadow: dirty ? "none" : "inset 0 0 0 1px rgba(0,0,0,0.12)",
                 fontFamily: "inherit"
               }}>
               Save override
@@ -588,41 +572,30 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
     </div>);
 }
 
-function ProviderCard({ name, sub, icon, active, onClick }) {
+function ProviderCard({ name, icon, active, onClick }) {
   return (
     <div
       onClick={onClick}
       className="mono-provider-card"
       data-active={active ? "1" : undefined}
       style={{
-        flex: 1, padding: "12px 12px 10px",
-        borderRadius: 10, cursor: "pointer",
-        background: active ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.5)",
-        boxShadow: active ? `inset 0 0 0 1.5px rgba(20,20,20,0.85)` : "inset 0 0 0 0.5px rgba(0,0,0,0.08)",
+        flex: 1, padding: "12px", cursor: "pointer",
+        display: "flex", alignItems: "center", gap: 8,
+        background: active ? "rgba(0,0,0,0.045)" : "#fff",
+        boxShadow: active ? `inset 0 0 0 1.5px rgba(20,20,20,0.8)` : "inset 0 0 0 1px rgba(0,0,0,0.10)",
         transition: "background 0.12s, box-shadow 0.12s"
       }}>
-      <div style={{
-        width: 26, height: 26, borderRadius: 7,
-        background: "rgba(0,0,0,0.05)",
-        color: N.inkDeep,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        marginBottom: 8
-      }}>
-        <I name={icon} size={13} stroke={1.7} />
-      </div>
-      <div style={{ fontSize: 12, fontWeight: 500, color: N.inkDeep, display: "flex", alignItems: "center", gap: 5 }}>
-        {name}
-        {active &&
-          <span style={{
-            width: 14, height: 14, borderRadius: "50%",
-            background: A.solid, color: A.onAccent,
-            display: "inline-flex", alignItems: "center", justifyContent: "center"
-          }}>
-            <I name="check" size={9} stroke={3} />
-          </span>
-        }
-      </div>
-      <div style={{ fontSize: 10, color: N.inkSoft, marginTop: 2, lineHeight: 1.4 }}>{sub}</div>
+      <I name={icon} size={14} stroke={1.7} style={{ color: N.inkMid, flexShrink: 0 }} />
+      <span style={{ fontSize: 12, fontWeight: 500, color: N.inkDeep, flex: 1 }}>{name}</span>
+      {active &&
+        <span style={{
+          width: 14, height: 14, borderRadius: "50%",
+          background: A.solid, color: A.onAccent, flexShrink: 0,
+          display: "inline-flex", alignItems: "center", justifyContent: "center"
+        }}>
+          <I name="check" size={9} stroke={3} />
+        </span>
+      }
     </div>);
 }
 
@@ -634,12 +607,9 @@ function GeneralPane() {
   function patch(p) { ctx.updateConfig(p).catch((e) => setError(e.message)); }
   return (
     <>
+      <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep }}>General</div>
       <div>
-        <div style={{ fontSize: 13, fontWeight: 500, color: N.inkDeep, marginBottom: 2 }}>General</div>
-        <div style={{ fontSize: 11, color: N.inkMid }}>App-level settings stored in <code>cas_config.json</code>.</div>
-      </div>
-      <div>
-        <FieldLabel hint="Switch school here · saves on blur">School base URL</FieldLabel>
+        <FieldLabel>School URL</FieldLabel>
         <FieldShell mono style={{ padding: 0 }}>
           <input
             // key forces re-mount when cfg.base updates from a successful login,
@@ -666,9 +636,9 @@ function GeneralPane() {
       <div>
         <FieldLabel>Database stats</FieldLabel>
         <div style={{
-          padding: "10px 12px", borderRadius: 8,
-          background: "rgba(255,255,255,0.6)",
-          boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.06)",
+          padding: "10px 12px", borderRadius: 0,
+          background: "#fff",
+          boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
           fontSize: 11.5, color: N.ink, lineHeight: 1.6, fontFamily: "ui-monospace, SF Mono, monospace"
         }}>
           {ctx.status && ctx.status.stats
@@ -693,19 +663,16 @@ function DangerPane() {
   return (
     <>
       <div>
-        <div style={{ fontSize: 13, fontWeight: 500, color: "#a4332e", marginBottom: 2 }}>
-          Danger Zone
-        </div>
-        <div style={{ fontSize: 11, color: N.inkMid, lineHeight: 1.55 }}>
-          When enabled, a red <b>Delete</b> button will appear in the top-right corner of each reflection card, allowing you to delete the reflection directly from ManageBac.
-Deletion cannot be undone — only enable this when you are <i>absolutely sure</i>.
+        <div style={{ fontSize: 13, fontWeight: 500, color: "#a4332e" }}>Danger Zone</div>
+        <div style={{ fontSize: 11, color: N.inkMid, lineHeight: 1.55, marginTop: 3 }}>
+          Shows a Delete button on each reflection. Deletion can't be undone.
         </div>
       </div>
       <div style={{
         padding: "14px 16px",
-        borderRadius: 10,
-        background: "rgba(216,80,74,0.08)",
-        boxShadow: "inset 0 0 0 0.5px rgba(216,80,74,0.3)",
+        borderRadius: 0,
+        background: "rgba(216,80,74,0.06)",
+        boxShadow: "inset 0 0 0 1px rgba(216,80,74,0.35)",
         display: "flex", alignItems: "center", gap: 12
       }}>
         <div style={{ flex: 1 }}>
@@ -810,8 +777,10 @@ function PlaceholderHubPanel() {
     });
   }
 
-  // Combine schedules with all experiences so users can enable new ones
-  const activeExps = (ctx.experiences || []).filter((e) => !e.is_completed);
+  // Combine schedules with active experiences so users can enable new ones
+  // (completed = locked on ManageBac; deleted = gone — neither can take a
+  // placeholder, so keep them out of the schedule list too).
+  const activeExps = (ctx.experiences || []).filter((e) => !e.is_completed && !e.is_deleted);
   const schedByCas = {}; (schedules || []).forEach((s) => { schedByCas[s.cas_id] = s; });
   const fullSchedList = activeExps.map((e) => {
     const s = schedByCas[e.id];
@@ -821,36 +790,47 @@ function PlaceholderHubPanel() {
   });
 
 
-  // Collapsed: a plain vertical strip joined to the main panel.
-  // Click anywhere on it to expand.
-  if (!ctx.hubOpen) {
-    return (
-      <div
-        onClick={ctx.toggleHub}
-        title={`Placeholders — ${queue.length} pending. Click to expand.`}
-        style={{
-          width: 30, flexShrink: 0, cursor: "pointer",
-          background: "#f4f4f3", borderLeft: HUB_SEP,
-          display: "flex", flexDirection: "column", alignItems: "center",
-          padding: "12px 0", gap: 8,
-        }}>
-        <I name="tray" size={14} stroke={1.7} style={{ color: N.inkMid }} />
-        {queue.length > 0 && (
-          <span className="tnum" style={{
-            fontSize: 10, color: A.onAccent, background: A.solid,
-            minWidth: 16, textAlign: "center", padding: "1px 0",
-            borderRadius: 4,
-          }}>{queue.length}</span>
-        )}
-      </div>);
-  }
+  const open = !!ctx.hubOpen;
+  const BG = window.MONO_BG;
 
-  // Expanded: same strip, grown wide. Queue on top, schedules below —
-  // no headers, the structure carries the hierarchy.
+  // One container whose width animates between the 30px strip and the
+  // 300px panel — the strip literally grows into the panel.
   return (
     <div style={{
-      width: 300, flexShrink: 0,
-      background: "#fafafa", borderLeft: HUB_SEP,
+      width: open ? 300 : 30, flexShrink: 0,
+      transition: "width 0.22s cubic-bezier(0.2, 0.8, 0.2, 1)",
+      background: open ? BG.bar : BG.sidebar,
+      borderLeft: HUB_SEP,
+      display: "flex", flexDirection: "column", overflow: "hidden",
+    }}>
+      {open ? <HubExpanded /> : (
+        <div
+          className="mono-fade"
+          onClick={ctx.toggleHub}
+          title={`Placeholders — ${queue.length} pending. Click to expand.`}
+          style={{
+            flex: 1, cursor: "pointer", minWidth: 30,
+            display: "flex", flexDirection: "column", alignItems: "center",
+            padding: "12px 0", gap: 8,
+          }}>
+          <I name="tray" size={14} stroke={1.7} style={{ color: N.inkMid }} />
+          {queue.length > 0 && (
+            <span className="tnum" style={{
+              fontSize: 10, color: A.onAccent, background: A.solid,
+              minWidth: 16, textAlign: "center", padding: "1px 0",
+              borderRadius: 4,
+            }}>{queue.length}</span>
+          )}
+        </div>
+      )}
+    </div>);
+
+  // Expanded body: queue on top, schedules below — no headers, the
+  // structure carries the hierarchy. Inner width is fixed at 300 so the
+  // content doesn't squish while the container width animates.
+  function HubExpanded() { return (
+    <div className="mono-fade" style={{
+      width: 300, flex: 1, minHeight: 0,
       display: "flex", flexDirection: "column", overflow: "hidden",
     }}>
       {/* Slim top row: count + collapse — no title */}
@@ -870,11 +850,10 @@ function PlaceholderHubPanel() {
         <I name="chevron" size={11} stroke={1.8} style={{ color: N.inkSoft }} />
       </div>
 
-      {/* Queue zone */}
-      <div style={{ flex: 1, overflow: "auto", padding: "10px 12px",
-                    display: "flex", flexDirection: "column", gap: 6 }}>
+      {/* Queue zone — full-bleed rows joined by hairlines */}
+      <div style={{ flex: 1, overflow: "auto" }}>
         {!loading && !queue.length && (
-          <div style={{ fontSize: 11, color: N.inkSoft, padding: "4px 2px" }}>
+          <div style={{ fontSize: 11, color: N.inkSoft, padding: "10px 12px" }}>
             No pending placeholders.
           </div>
         )}
@@ -894,21 +873,16 @@ function PlaceholderHubPanel() {
             />
           );
         })}
-        <div style={{ flex: 1 }} />
-        <Btn onClick={runAllDue} disabled={loading}
-             style={{ alignSelf: "flex-end" }}>▶ Run all due</Btn>
       </div>
 
       {/* Schedules zone — separated by a solid divider, no header */}
       <div style={{
         borderTop: HUB_SEP,
         maxHeight: "45%", overflow: "auto",
-        padding: "10px 12px",
-        display: "flex", flexDirection: "column", gap: 6,
-        background: "#f4f4f3",
+        background: BG.sidebar,
       }}>
         {!loading && !fullSchedList.length && (
-          <div style={{ fontSize: 11, color: N.inkSoft }}>No active experiences.</div>
+          <div style={{ fontSize: 11, color: N.inkSoft, padding: "10px 12px" }}>No active experiences.</div>
         )}
         {fullSchedList.map((s) =>
           <ScheduleRow
@@ -925,11 +899,23 @@ function PlaceholderHubPanel() {
             onRunNow={() => runOne(s.cas_id)}
           />
         )}
-        {error && (
-          <div style={{ fontSize: 10.5, color: "#a4332e" }}>⚠ {error}</div>
-        )}
+      </div>
+
+      {/* Footer bar — aligned with the composer/settings footers */}
+      <div style={{
+        height: 42, flexShrink: 0, boxSizing: "border-box",
+        padding: "0 12px", borderTop: HUB_SEP,
+        display: "flex", alignItems: "center", gap: 8,
+        background: BG.bar,
+      }}>
+        {error && <span style={{ fontSize: 10.5, color: "#a4332e", flex: 1,
+                                 overflow: "hidden", textOverflow: "ellipsis",
+                                 whiteSpace: "nowrap" }}>⚠ {error}</span>}
+        <div style={{ flex: 1 }} />
+        <Btn onClick={runAllDue} disabled={loading}>▶ Run all due</Btn>
       </div>
     </div>);
+  }
 }
 
 function Toggle({ on, onClick }) {
@@ -956,10 +942,8 @@ function Toggle({ on, onClick }) {
 function ScheduleRow({ exp, strands, everyDays, next, on, onToggle, onStep, onRunNow }) {
   return (
     <div className="mono-schedule-row" style={{
-      padding: "10px 12px", borderRadius: 5,
-      background: "#fff",
-      boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
-      opacity: on ? 1 : 0.65,
+      padding: "10px 12px", borderBottom: HUB_SEP,
+      opacity: on ? 1 : 0.6,
       display: "flex", flexDirection: "column", gap: 8,
       flexShrink: 0,
       transition: "background 0.15s"
@@ -976,8 +960,8 @@ function ScheduleRow({ exp, strands, everyDays, next, on, onToggle, onStep, onRu
         <span style={{ fontSize: 10.5, color: N.inkMid }}>Every</span>
         <div style={{
           display: "inline-flex", alignItems: "stretch",
-          background: "rgba(255,255,255,0.85)", borderRadius: 6,
-          boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.1)",
+          background: "#fff", borderRadius: 5,
+          boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)",
           fontSize: 11, overflow: "hidden"
         }}>
           <button onClick={() => onStep && onStep(-1)} style={stepperBtn}>−</button>
@@ -996,11 +980,11 @@ function ScheduleRow({ exp, strands, everyDays, next, on, onToggle, onStep, onRu
           onClick={onRunNow}
           title="Create a placeholder reflection now"
           style={{
-            fontSize: 10.5, padding: "3px 8px", borderRadius: 6,
-            background: "rgba(255,255,255,0.85)",
+            fontSize: 10.5, padding: "3px 8px", borderRadius: 5,
+            background: "#fff",
             border: "none", color: N.ink, cursor: "pointer",
             fontFamily: "inherit", fontWeight: 500,
-            boxShadow: "inset 0 0 0 0.5px rgba(0,0,0,0.1)"
+            boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)"
           }}>▶ Now</button>
       </div>
     </div>);
@@ -1016,7 +1000,8 @@ function QueueRow({ date, strands, exp, preview, onStart }) {
   const previewText = React.useMemo(() => {
     const d = document.createElement("div");
     d.innerHTML = preview || "";
-    const t = (d.textContent || "").trim();
+    // Drop the hidden stealth-placeholder marker so it never leaks into text
+    let t = (d.textContent || "").replace(/casmgr-ph/g, "").trim();
     return t.length > 80 ? t.slice(0, 80) + "…" : t;
   }, [preview]);
   return (
@@ -1025,9 +1010,7 @@ function QueueRow({ date, strands, exp, preview, onStart }) {
       onClick={onStart}
       style={{
         display: "flex", alignItems: "center", gap: 10,
-        padding: "9px 12px", borderRadius: 5,
-        background: "#fff",
-        boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
+        padding: "9px 12px", borderBottom: HUB_SEP,
         flexShrink: 0,
         cursor: "pointer", transition: "background 0.15s"
       }}>

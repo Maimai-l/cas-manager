@@ -173,6 +173,37 @@ def _ai_via_anthropic(system: str, user: str, model: str) -> str:
     return msg.content[0].text.strip()
 
 
+def _ai_via_deepseek(system: str, user: str, model: str, api_key: str = "") -> str:
+    """Call DeepSeek's OpenAI-compatible chat endpoint. The API key comes
+    from Settings (stored in config); falls back to DEEPSEEK_API_KEY env."""
+    import json as _json
+    import os
+    import urllib.request
+    key = (api_key or "").strip() or os.environ.get("DEEPSEEK_API_KEY")
+    if not key:
+        raise RuntimeError("Add your DeepSeek API key in Settings → AI provider")
+    payload = _json.dumps({
+        "model": model or "deepseek-chat",
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        "stream": False,
+    }).encode()
+    req = urllib.request.Request(
+        "https://api.deepseek.com/chat/completions",
+        data=payload,
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            data = _json.loads(resp.read())
+        return data["choices"][0]["message"]["content"].strip()
+    except Exception as ex:
+        raise RuntimeError(f"DeepSeek error: {ex}")
+
+
 def _ai_via_ollama(system: str, user: str, model: str, url: str) -> str:
     import json as _json
     import urllib.request
@@ -207,7 +238,7 @@ def ai_generate(notes: str, model: str,
                 history: Optional[list] = None,
                 question: Optional[str] = None) -> str:
     cfg = cfg or {}
-    provider = cfg.get("ai_provider", "anthropic")
+    provider = cfg.get("ai_provider", "deepseek")
     # "edit" reuses the regular reflection system prompt (LO context etc.)
     if kind == "final":
         system = final_system_with_context(proposal)
@@ -228,7 +259,10 @@ def ai_generate(notes: str, model: str,
             "Provider 'prompt' is the manual copy-paste flow — build the prompt "
             "with build_prompt() and let the user paste the AI's answer back."
         )
-    return _ai_via_anthropic(system, user, model)
+    if provider == "anthropic":
+        return _ai_via_anthropic(system, user, model)
+    return _ai_via_deepseek(system, user, model or "deepseek-chat",
+                            cfg.get("deepseek_api_key", ""))
 
 
 def ai_generate_final(notes: str, model: str,

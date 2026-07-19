@@ -90,6 +90,8 @@ class ReflectionEntry:
     lo_ids: list[int] = field(default_factory=list)
     s3_urls: list[str] = field(default_factory=list)
     is_placeholder: Optional[bool] = None
+    # File attachments (for kind == "file"): each {"name": str, "size": str}.
+    files: list = field(default_factory=list)
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -139,24 +141,52 @@ def _kind_from_classes(classes: list) -> str:
 
 # ── Experiences list ─────────────────────────────────────────────────────────
 
-_EXP_ID_RE = re.compile(r"/student/ib/activity/cas/(\d+)$")
+_EXP_ID_RE = re.compile(r"/student/ib/activity/cas/(\d+)(?:[?#].*)?$")
 
 
 def scan_experiences(html: str) -> list[Experience]:
-    """Parse the CAS experiences list page → list of Experience."""
+    """Parse the CAS experiences list page → list of Experience.
+
+    Primary path reads the styled activity tiles (so completion state is
+    known). If the tile markup ever changes, fall back to scraping any link
+    that points at an experience detail page — losing only the completion
+    flag, never the whole list."""
     soup = BeautifulSoup(html, "html.parser")
     results: list[Experience] = []
+    seen: set[int] = set()
+
     for card in soup.select("div.fusion-card-item.activity-tile"):
-        link = card.select_one("h4.title a[href]")
+        link = card.select_one(".title a[href]")
         if not link:
             continue
         m = _EXP_ID_RE.search(link["href"])
         if not m:
             continue
         cas_id = int(m.group(1))
+        if cas_id in seen:
+            continue
+        seen.add(cas_id)
         name = link.get_text(strip=True)
         is_completed = bool(card.select_one("svg.fi-cas-completed-inverted"))
         results.append(Experience(cas_id=cas_id, name=name, is_completed=is_completed))
+
+    if results:
+        return results
+
+    # Fallback: tiles not found (DOM changed). Grab every experience-detail
+    # link on the page and dedupe.
+    for a in soup.select('a[href*="/student/ib/activity/cas/"]'):
+        m = _EXP_ID_RE.search(a.get("href", ""))
+        if not m:
+            continue
+        cas_id = int(m.group(1))
+        if cas_id in seen:
+            continue
+        name = a.get_text(strip=True)
+        if not name:
+            continue
+        seen.add(cas_id)
+        results.append(Experience(cas_id=cas_id, name=name, is_completed=False))
     return results
 
 
@@ -384,6 +414,21 @@ def scan_page(html: str, page_no: int) -> list[ReflectionEntry]:
             raw = rte.decode_contents().strip()
             body_html = raw if raw else None
 
+        # ── Extract file attachments (file-evidence) ───────────────────────
+        files: list = []
+        for f in el.select(".fileslibrary .file"):
+            a = f.select_one("a.file-name") or f.select_one("a[href]")
+            if not a:
+                continue
+            fname = a.get_text(strip=True)
+            if not fname:
+                continue
+            info = f.select_one(".asset-info")
+            files.append({
+                "name": fname,
+                "size": info.get_text(strip=True) if info else "",
+            })
+
         # ── Extract album photos directly from the list page ───────────────
         photos: list[Photo] = []
         for i, photo_div in enumerate(el.select(".album .photo")):
@@ -416,6 +461,7 @@ def scan_page(html: str, page_no: int) -> list[ReflectionEntry]:
             group_date=current_date, page_no=page_no, pos=pos,
             body_html=body_html,
             photos=photos,
+            files=files,
             is_placeholder=is_ph,
         ))
 
@@ -720,6 +766,51 @@ def create_album(s: requests.Session, base: str, cas_id: int,
     # Album body can't be set on create — patch it after settle
     time.sleep(4.0)
     return rid
+
+
+_CT_BY_EXT = {
+    ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+    ".gif": "image/gif", ".webp": "image/webp", ".heic": "image/heic",
+    ".pdf": "application/pdf", ".doc": "application/msword",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".ppt": "application/vnd.ms-powerpoint",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ".xls": "application/vnd.ms-excel",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".txt": "text/plain", ".mp4": "video/mp4", ".mov": "video/quicktime",
+}
+
+
+def _guess_ct(fname: str) -> str:
+    dot = fname.rfind(".")
+    return _CT_BY_EXT.get(fname[dot:].lower(), "application/octet-stream") if dot >= 0 \
+        else "application/octet-stream"
+
+
+def create_file_evidence(s: requests.Session, base: str, cas_id: int,
+                         csrf: str, lo_ids: list[int],
+                         filename: str, data_bytes: bytes,
+                         body_html: str = "") -> int:
+    """Upload a single file attachment as a FileEvidence.
+
+    FileEvidence has a one-to-one asset association (accepts_nested_attributes_for
+    :asset), so the field is the singular, unindexed
+    evidence[asset_attributes][file] — one file per reflection, never an array.
+    An optional evidence[body] carries reflection text alongside the file."""
+    list_url = _url_list(base, cas_id)
+    before = {e.rid for _, pg in iter_pages(s, base, cas_id, 1) for e in pg}
+
+    fields = [("type", "FileEvidence"),
+              ("evidence[body]", body_html or ""),
+              *_lo_fields(lo_ids),
+              ("commit", "添加新纪录")]
+    files = [("evidence[asset_attributes][file]",
+              (filename, data_bytes, _guess_ct(filename)))]
+
+    r = s.post(list_url, headers=_xhr_headers(base, csrf, list_url),
+               data=fields, files=files, allow_redirects=False, timeout=180)
+    _check(r, "create_file_evidence")
+    return _poll_new_rid(s, base, cas_id, before)
 
 
 def substitute_date_in_html(body_html: str, new_date_str: str) -> str:

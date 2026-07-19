@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS reflections (
     group_date     TEXT    NOT NULL DEFAULT '',
     body_html      TEXT,
     lo_ids         TEXT    NOT NULL DEFAULT '[]',  -- JSON array of ints
+    files_json     TEXT    NOT NULL DEFAULT '[]',  -- JSON array of {name,size} (file kind)
     is_placeholder INTEGER NOT NULL DEFAULT 0,     -- 0 | 1
     synced_at      TEXT,
     FOREIGN KEY (cas_id) REFERENCES experiences(id)
@@ -121,6 +122,10 @@ def init_db(db_path: Path = DEFAULT_DB) -> None:
             conn.execute("ALTER TABLE experiences ADD COLUMN strand TEXT NOT NULL DEFAULT ''")
         if "is_deleted" not in cols:
             conn.execute("ALTER TABLE experiences ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0")
+        # Migration: add files_json to reflections (file-evidence attachments)
+        refl_cols = {r[1] for r in conn.execute("PRAGMA table_info(reflections)")}
+        if "files_json" not in refl_cols:
+            conn.execute("ALTER TABLE reflections ADD COLUMN files_json TEXT NOT NULL DEFAULT '[]'")
         # Migration: create schedules table if missing (pre-dates this feature)
         conn.execute("""
             CREATE TABLE IF NOT EXISTS schedules (
@@ -185,14 +190,15 @@ def upsert_reflection(conn: sqlite3.Connection,
     Photos are handled separately via upsert_photo."""
     conn.execute("""
         INSERT INTO reflections (id, cas_id, kind, group_date, body_html, lo_ids,
-                                 is_placeholder, synced_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                                 files_json, is_placeholder, synced_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             kind           = excluded.kind,
             group_date     = excluded.group_date,
             body_html      = CASE WHEN excluded.body_html IS NOT NULL
                                   THEN excluded.body_html ELSE body_html END,
             lo_ids         = excluded.lo_ids,
+            files_json     = excluded.files_json,
             is_placeholder = CASE WHEN excluded.body_html IS NOT NULL
                                   THEN excluded.is_placeholder ELSE is_placeholder END,
             synced_at      = excluded.synced_at
@@ -203,6 +209,7 @@ def upsert_reflection(conn: sqlite3.Connection,
         entry.group_date,
         entry.body_html,
         json.dumps(entry.lo_ids),
+        json.dumps(entry.files or []),
         1 if entry.is_placeholder else 0,   # never NULL — None → 0
         _now(),
     ))
@@ -232,6 +239,7 @@ def get_reflection(conn: sqlite3.Connection, rid: int) -> Optional[dict]:
         return None
     r = dict(row)
     r["lo_ids"] = json.loads(r["lo_ids"])
+    r["files"] = json.loads(r.get("files_json") or "[]")
     r["photos"] = _get_photos(conn, rid)
     return r
 
@@ -255,6 +263,7 @@ def list_reflections(conn: sqlite3.Connection,
     for row in rows:
         r = dict(row)
         r["lo_ids"] = json.loads(r["lo_ids"])
+        r["files"] = json.loads(r.get("files_json") or "[]")
         r["photos"] = _get_photos(conn, r["id"])
         result.append(r)
     return result
@@ -292,6 +301,10 @@ def mark_experiences_deletion_state(conn: sqlite3.Connection,
     - Mark experiences in DB but not in live as is_deleted=1 (newly disappeared)
     - Mark experiences in live as is_deleted=0 (restored if they were marked deleted)
     Returns (newly_deleted_ids, restored_ids)."""
+    # Safety valve: an empty live set means the fetch/parse failed, NOT that
+    # the student deleted every experience. Never mark the whole list deleted.
+    if not live_cas_ids:
+        return [], []
     local = {r["id"]: r["is_deleted"] for r in conn.execute(
         "SELECT id, is_deleted FROM experiences"
     ).fetchall()}

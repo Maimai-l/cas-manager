@@ -49,11 +49,54 @@ def _err(msg: str, code: int = 400):
 
 def _strip_html(html: str) -> str:
     """Strip HTML tags and decode entities to plain text.
-    Must unescape entities FIRST (e.g. &lt;p&gt; → <p>), then strip tags."""
+    Must unescape entities FIRST (e.g. &lt;p&gt; → <p>), then strip tags.
+    Also drops the hidden stealth-placeholder marker so it never surfaces in
+    previews or copied text."""
     import html as _h
     decoded = _h.unescape(html or "")            # &lt;p&gt; → <p>
+    decoded = decoded.replace(cas_api.PLACEHOLDER_MARKER, "")
     text    = re.sub(r"<[^>]+>", " ", decoded)   # <p> → space
     return " ".join(text.split())
+
+
+def _html_to_text(html: str) -> str:
+    """HTML → plain text, PRESERVING paragraph and line breaks.
+
+    Used to seed the edit box and the copy button: ManageBac stores journals as
+    <p>…</p> paragraphs with <br> soft breaks, and collapsing those to spaces
+    (like _strip_html does) is what made edited entries come back as one blob.
+    Block-closing tags become blank lines, <br> becomes a single newline."""
+    import html as _h
+    s = _h.unescape(html or "")
+    s = s.replace(cas_api.PLACEHOLDER_MARKER, "")
+    s = re.sub(r"(?i)<\s*br\s*/?>", "\n", s)
+    s = re.sub(r"(?i)</\s*(p|div|li|h[1-6]|blockquote|ul|ol)\s*>", "\n\n", s)
+    s = re.sub(r"<[^>]+>", "", s)                    # strip remaining tags
+    # Collapse inline whitespace per line, keep the newline structure.
+    lines = [re.sub(r"[ \t ]+", " ", ln).strip() for ln in s.split("\n")]
+    s = "\n".join(lines)
+    s = re.sub(r"\n{3,}", "\n\n", s)                 # at most one blank line
+    return s.strip()
+
+
+def _plain_to_html(text: str) -> str:
+    """Plain text → ManageBac redactor HTML. Blank lines split paragraphs;
+    single newlines within a paragraph become <br>. HTML-escapes content so
+    stray <, >, & don't corrupt the markup. Text that already looks like HTML
+    (starts with '<') is passed through untouched."""
+    import html as _h
+    t = (text or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+    if not t:
+        return ""
+    if t.startswith("<"):
+        return t
+    paras = re.split(r"\n{2,}", t)
+    out = []
+    for para in paras:
+        lines = [_h.escape(ln.strip()) for ln in para.split("\n") if ln.strip()]
+        if lines:
+            out.append("<p>" + "<br>".join(lines) + "</p>")
+    return "".join(out)
 
 
 # LO ID → display string (LO# · Title)
@@ -130,10 +173,11 @@ def _enrich_reflection(r: dict) -> dict:
     """Add display-friendly fields to a reflection dict."""
     photos = r.get("photos") or []
     body_html = r.get("body_html") or ""
-    r["body_text"]    = _strip_html(body_html)
+    r["body_text"]    = _html_to_text(body_html)   # keeps paragraph/line breaks
     r["body_preview"] = _body_preview(body_html)
     r["date_iso"]     = _date_iso(r.get("group_date", ""))
     r["lo_display"]   = _lo_display_from_ids(r.get("lo_ids") or [])
+    r["file_list"]    = r.get("files") or []
     r["photo_list"]   = [
         {
             "id":      p["id"],
@@ -224,7 +268,7 @@ def api_status():
     return _ok({
         "logged_in":   logged_in,
         "ai_provider": cfg.get("ai_provider", "prompt"),
-        "ai_model":    cfg.get("ai_model", "claude-opus-4-6"),
+        "ai_model":    cfg.get("ai_model", "deepseek-chat"),
         "stats":       stats,
     })
 
@@ -314,6 +358,13 @@ def api_reflections(cas_id: int):
 # ── API: sync ─────────────────────────────────────────────────────────────────
 # ══════════════════════════════════════════════════════════════════════════════
 
+@app.route("/api/sync/experiences", methods=["POST"])
+def api_sync_experiences():
+    """Fast path: fetch + cache just the experience LIST (no reflections),
+    so the sidebar can populate immediately after login."""
+    return _ok(ctrl.ctrl_fetch_experiences_from_web())
+
+
 @app.route("/api/sync/all", methods=["POST"])
 def api_sync_all():
     return _ok(ctrl.ctrl_sync_all(include_completed=True))
@@ -335,10 +386,7 @@ def api_create_journal(cas_id: int):
     lo_ids   = data.get("lo_ids") or None
     if not body.strip():
         return _err("body_html is required")
-    # Wrap plain text in <p> tags if needed
-    if not body.strip().startswith("<"):
-        body = "".join(f"<p>{l.strip()}</p>"
-                       for l in body.splitlines() if l.strip())
+    body = _plain_to_html(body)   # no-op if already HTML; keeps line breaks
     rid = ctrl.ctrl_create_journal(cas_id, body, lo_ids=lo_ids)
     return _ok({"rid": rid})
 
@@ -387,6 +435,24 @@ def api_create_album(cas_id: int):
     rid = ctrl.ctrl_create_album_bytes(cas_id, photos, lo_ids=lo_ids,
                                        date_str=date)
     return _ok({"rid": rid})
+
+
+@app.route("/api/experiences/<int:cas_id>/file", methods=["POST"])
+def api_create_file(cas_id: int):
+    # Multipart: one or more attachments in "files" (each becomes its own
+    # FileEvidence), optional "body" text applied to each.
+    uploaded = request.files.getlist("files")
+    if not uploaded:
+        return _err("Please select at least one file", 400)
+    lo_ids    = _parse_lo_ids_form(request.form.get("lo_ids"))
+    body      = request.form.get("body", "")
+    body_html = _plain_to_html(body) if body.strip() else ""
+    files: list[tuple[str, bytes]] = [
+        (f.filename or f"file_{i}", f.read()) for i, f in enumerate(uploaded)
+    ]
+    rids = ctrl.ctrl_create_file_evidence(cas_id, files, lo_ids=lo_ids,
+                                          body_html=body_html)
+    return _ok({"rids": rids})
 
 
 @app.route("/api/reflections/<int:rid>/album/photos", methods=["GET"])
@@ -445,9 +511,7 @@ def api_edit_reflection(rid: int):
         return _err("cas_id required")
     if not body.strip():
         return _err("body_html required")
-    if not body.strip().startswith("<"):
-        body = "".join(f"<p>{l.strip()}</p>"
-                       for l in body.splitlines() if l.strip())
+    body = _plain_to_html(body)   # no-op if already HTML; keeps line breaks
     ctrl.ctrl_edit_journal(int(cas_id), rid, body, lo_ids=lo_ids)
     return _ok()
 
@@ -592,6 +656,30 @@ def api_ai_generate():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/debug/experiences")
+def api_debug_experiences():
+    """Fetch the experiences list page live and show what the scraper sees —
+    for diagnosing an empty sidebar. No DB writes."""
+    import cas_api
+    s, base = ctrl.ctrl_session()
+    url = f"{base}/student/ib/activity/cas"
+    r = s.get(url, timeout=30, allow_redirects=True)
+    exps = cas_api.scan_experiences(r.text)
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(r.text, "html.parser")
+    return _ok({
+        "url":               url,
+        "status_code":       r.status_code,
+        "redirected_to":     r.url,
+        "tile_selector_hits": len(soup.select("div.fusion-card-item.activity-tile")),
+        "cas_link_hits":     len(soup.select('a[href*="/student/ib/activity/cas/"]')),
+        "parsed_count":      len(exps),
+        "parsed":            [{"cas_id": e.cas_id, "name": e.name,
+                               "is_completed": e.is_completed} for e in exps],
+        "html_len":          len(r.text),
+    })
+
 
 @app.route("/api/debug/reflections/<int:cas_id>")
 def api_debug_reflections(cas_id: int):

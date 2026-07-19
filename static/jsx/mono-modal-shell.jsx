@@ -1,28 +1,29 @@
-// ── Modal shell + form primitives (mono) ────────────────────────────────
+// ── Modal shell + form primitives (mono, flat) ──────────────────────────
+// Floating dialogs keep a modest 8px radius (macOS alert style); everything
+// inside is solid fills + 1px borders — no glass, no blur.
 const I = window.I;
 const A = window.MONO_ACCENT;
 const N = window.MONO_NEUTRALS;
+
+const MS_SEP = window.MONO_SEP || "1px solid rgba(0,0,0,0.10)";
 
 function ModalShell({ title, children, footer, width = 560, bodyStyle, onClose }) {
   const ctx = React.useContext(window.MonoCtx);
   const handleClose = onClose || ctx.close;
   return (
     <div
+      className="mono-fade"
       onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
       style={{
         position: "absolute", inset: 0, zIndex: 50,
         display: "flex", alignItems: "center", justifyContent: "center",
-        background: "rgba(20,20,20,0.18)",
-        backdropFilter: "blur(2px)",
-        WebkitBackdropFilter: "blur(2px)",
+        background: "rgba(20,20,20,0.25)",
       }}>
-      <div style={{
+      <div className="mono-pop" style={{
         width, maxHeight: 720,
-        borderRadius: 14,
-        background: "rgba(252,252,252,0.85)",
-        backdropFilter: "blur(40px) saturate(180%)",
-        WebkitBackdropFilter: "blur(40px) saturate(180%)",
-        boxShadow: "inset 0 0 0 0.5px rgba(255,255,255,0.7), 0 24px 60px rgba(0,0,0,0.22), 0 0 0 0.5px rgba(0,0,0,0.06)",
+        borderRadius: 8,
+        background: "#fff",
+        boxShadow: "0 0 0 1px rgba(0,0,0,0.12), 0 18px 45px rgba(0,0,0,0.22)",
         display: "flex", flexDirection: "column", overflow: "hidden",
         position: "relative",
       }}>
@@ -40,9 +41,10 @@ function ModalShell({ title, children, footer, width = 560, bodyStyle, onClose }
         </button>
 
         <div style={{
-          padding: "12px 44px 11px",
+          padding: "11px 44px 10px",
           display: "flex", alignItems: "center", gap: 10,
-          borderBottom: "0.5px solid " + N.hairline,
+          borderBottom: MS_SEP,
+          background: "#fafafa",
         }}>
           <div style={{
             flex: 1, textAlign: "center",
@@ -61,9 +63,9 @@ function ModalShell({ title, children, footer, width = 560, bodyStyle, onClose }
         {footer && (
           <div style={{
             padding: "10px 14px",
-            borderTop: "0.5px solid " + N.hairline,
+            borderTop: MS_SEP,
             display: "flex", justifyContent: "flex-end", gap: 7,
-            background: "rgba(255,255,255,0.3)",
+            background: "#fafafa",
           }}>{footer}</div>
         )}
       </div>
@@ -85,9 +87,9 @@ function FieldLabel({ children, hint }) {
 
 function FieldShell({ children, height, mono, focused, style }) {
   return (
-    <div style={{
-      background: "rgba(255,255,255,0.78)",
-      borderRadius: 8,
+    <div className="mono-field" style={{
+      background: "#fff",
+      borderRadius: 5,
       padding: "8px 11px",
       minHeight: height,
       fontSize: mono ? 11.5 : 12.5,
@@ -95,8 +97,8 @@ function FieldShell({ children, height, mono, focused, style }) {
       color: N.inkDeep,
       fontFamily: mono ? `"SF Mono", Menlo, monospace` : "inherit",
       boxShadow: focused
-        ? "inset 0 0 0 1px rgba(20,20,20,0.4), 0 0 0 3px rgba(0,0,0,0.06)"
-        : "inset 0 0 0 0.5px rgba(0,0,0,0.1), inset 0 0.5px 0 rgba(255,255,255,0.6)",
+        ? "inset 0 0 0 1px rgba(20,20,20,0.4)"
+        : "inset 0 0 0 1px rgba(0,0,0,0.12)",
       ...style,
     }}>{children}</div>
   );

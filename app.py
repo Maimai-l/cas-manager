@@ -10,10 +10,12 @@ Logging:
         frozen mode: ~/Library/Application Support/CAS Manager/app.log
     The log path is also printed to stderr on startup so you can `tail -f`.
 
-Debug tools (always available — the app is localhost-only):
+Debug tools (the app is localhost-only):
     - GET /api/debug/reflections/<cas_id>  — raw DB rows
     - GET /api/debug/scan/<cas_id>         — live ManageBac HTML scrape diagnostics
-    - Right-click in window → Inspect (PyWebView inspector is enabled)
+    - GET /api/debug/sa/<cas_id>           — parsed Self-Assessment form dump
+    - WebKit inspector: opt-in via CAS_DEBUG=1 (off by default — debug mode
+      auto-opens the DevTools window on some platforms)
 
 Run (dev mode):
     pip install pywebview
@@ -187,13 +189,15 @@ def main():
         width=1280, height=820,
         min_size=(900, 600),
         confirm_close=False,
+        text_select=True,
     )
-    # debug=True enables the right-click → Inspect Element WebKit inspector,
-    # invaluable for diagnosing blank-window issues. Safe to leave on for
-    # a local-only app; if you want it off in a release build, gate this
-    # behind `not cas_paths.FROZEN` or an env var.
+    # debug=True enables the WebKit inspector, but on several platforms it
+    # also AUTO-OPENS the DevTools window on launch — so it's opt-in now:
+    #     CAS_DEBUG=1 python app.py     (or set it before opening the .app)
+    debug = os.environ.get("CAS_DEBUG") == "1"
+    log.info(f"webview debug (inspector): {debug}")
     try:
-        webview.start(debug=True)
+        webview.start(debug=debug)
     except Exception:
         log.exception("webview.start() raised")
         sys.exit(1)
