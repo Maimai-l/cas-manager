@@ -248,11 +248,11 @@ function AIProviderPane() {
 
       <div style={{ display: "flex", gap: 8 }}>
         <ProviderCard active={provider === "prompt"}   onClick={() => patch({ ai_provider: "prompt" })}
-          name="Prompt"   sub="Copy & paste — any AI" icon="copy" />
+          name="Prompt"   icon="copy" />
         <ProviderCard active={provider === "deepseek"} onClick={() => patch({ ai_provider: "deepseek" })}
-          name="DeepSeek" sub="API · cheap" icon="cloud" />
+          name="DeepSeek" icon="cloud" />
         <ProviderCard active={provider === "ollama"}   onClick={() => patch({ ai_provider: "ollama" })}
-          name="Ollama"   sub="Local model" icon="cpu" />
+          name="Ollama"   icon="cpu" />
       </div>
 
       <div>
@@ -567,41 +567,30 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
     </div>);
 }
 
-function ProviderCard({ name, sub, icon, active, onClick }) {
+function ProviderCard({ name, icon, active, onClick }) {
   return (
     <div
       onClick={onClick}
       className="mono-provider-card"
       data-active={active ? "1" : undefined}
       style={{
-        flex: 1, padding: "12px 12px 10px",
-        borderRadius: 0, cursor: "pointer",
+        flex: 1, padding: "12px", cursor: "pointer",
+        display: "flex", alignItems: "center", gap: 8,
         background: active ? "rgba(0,0,0,0.045)" : "#fff",
         boxShadow: active ? `inset 0 0 0 1.5px rgba(20,20,20,0.8)` : "inset 0 0 0 1px rgba(0,0,0,0.10)",
         transition: "background 0.12s, box-shadow 0.12s"
       }}>
-      <div style={{
-        width: 26, height: 26, borderRadius: 5,
-        background: "rgba(0,0,0,0.05)",
-        color: N.inkDeep,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        marginBottom: 8
-      }}>
-        <I name={icon} size={13} stroke={1.7} />
-      </div>
-      <div style={{ fontSize: 12, fontWeight: 500, color: N.inkDeep, display: "flex", alignItems: "center", gap: 5 }}>
-        {name}
-        {active &&
-          <span style={{
-            width: 14, height: 14, borderRadius: "50%",
-            background: A.solid, color: A.onAccent,
-            display: "inline-flex", alignItems: "center", justifyContent: "center"
-          }}>
-            <I name="check" size={9} stroke={3} />
-          </span>
-        }
-      </div>
-      <div style={{ fontSize: 10, color: N.inkSoft, marginTop: 2, lineHeight: 1.4 }}>{sub}</div>
+      <I name={icon} size={14} stroke={1.7} style={{ color: N.inkMid, flexShrink: 0 }} />
+      <span style={{ fontSize: 12, fontWeight: 500, color: N.inkDeep, flex: 1 }}>{name}</span>
+      {active &&
+        <span style={{
+          width: 14, height: 14, borderRadius: "50%",
+          background: A.solid, color: A.onAccent, flexShrink: 0,
+          display: "inline-flex", alignItems: "center", justifyContent: "center"
+        }}>
+          <I name="check" size={9} stroke={3} />
+        </span>
+      }
     </div>);
 }
 
