@@ -13,14 +13,19 @@ const { StatusLine, useAsyncOp, wrapPlainAsHtml, stripHtml,
         Dropzone, DeleteChip } = window.MonoHelpers;
 const API = window.API;
 
-// Clipboard with layered fallback. Browser clipboard APIs need a live user
-// gesture, which is already gone after "Copy prompt" awaits its network build —
-// so both navigator.clipboard and execCommand fail inside pywebview's WebKit.
-// The last resort asks the app process to write the OS clipboard (pbcopy etc.),
-// which has no gesture/permission requirement. Copying is core here, so we try
-// every path before reporting failure.
+// Clipboard write. Inside pywebview's WebKit the browser APIs are unreliable:
+// navigator.clipboard needs a live user gesture (gone after "Copy prompt"
+// awaits its network build), and execCommand("copy") often returns true
+// WITHOUT actually writing — so trusting it reports "Copied" over an empty
+// clipboard. The Python side (pbcopy etc.) writes the real OS clipboard with no
+// gesture/permission caveats, so it is the PRIMARY path; the browser APIs are
+// only a fallback for a plain-browser dev session with no OS clipboard tool.
 async function copyTextToClipboard(text) {
   if (!text) return false;
+  try {
+    const r = await API.copyClipboard(text);
+    if (r && r.copied) return true;
+  } catch (_) { /* backend unavailable — fall through to browser paths */ }
   try {
     await navigator.clipboard.writeText(text);
     return true;
@@ -36,12 +41,7 @@ async function copyTextToClipboard(text) {
     ta.select();
     const ok = document.execCommand("copy");
     document.body.removeChild(ta);
-    if (ok) return true;
-  } catch (_) { /* fall through */ }
-  // Desktop fallback: the Python side writes the OS clipboard directly.
-  try {
-    const r = await API.copyClipboard(text);
-    return !!(r && r.copied);
+    return ok;
   } catch (_) {
     return false;
   }

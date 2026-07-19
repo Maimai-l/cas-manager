@@ -424,13 +424,16 @@ def ctrl_copy_to_clipboard(text: str) -> bool:
     user gesture, which is gone by the time an async "Copy prompt" finishes its
     network round-trip — so they fail inside the webview. Writing from the
     Python side sidesteps that entirely. Returns True on success."""
+    import os
     import subprocess
     import sys
     from shutil import which
 
     data = (text or "").encode("utf-8")
     if sys.platform == "darwin":
-        cmd = ["pbcopy"]
+        # Absolute path: a Finder-launched .app inherits a minimal PATH that may
+        # not resolve bare "pbcopy". /usr/bin/pbcopy ships with every macOS.
+        cmd = ["/usr/bin/pbcopy"] if os.path.exists("/usr/bin/pbcopy") else ["pbcopy"]
     elif sys.platform.startswith("win"):
         cmd = ["clip"]
     else:
