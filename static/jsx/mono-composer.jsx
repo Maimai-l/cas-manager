@@ -13,27 +13,37 @@ const { StatusLine, useAsyncOp, wrapPlainAsHtml, stripHtml,
         Dropzone, DeleteChip } = window.MonoHelpers;
 const API = window.API;
 
-// Clipboard with fallback — navigator.clipboard can fail inside pywebview,
-// and copying is a core operation here, so never fail silently.
+// Clipboard with layered fallback. Browser clipboard APIs need a live user
+// gesture, which is already gone after "Copy prompt" awaits its network build —
+// so both navigator.clipboard and execCommand fail inside pywebview's WebKit.
+// The last resort asks the app process to write the OS clipboard (pbcopy etc.),
+// which has no gesture/permission requirement. Copying is core here, so we try
+// every path before reporting failure.
 async function copyTextToClipboard(text) {
+  if (!text) return false;
   try {
     await navigator.clipboard.writeText(text);
     return true;
+  } catch (_) { /* fall through */ }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    ta.style.top = "0";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    if (ok) return true;
+  } catch (_) { /* fall through */ }
+  // Desktop fallback: the Python side writes the OS clipboard directly.
+  try {
+    const r = await API.copyClipboard(text);
+    return !!(r && r.copied);
   } catch (_) {
-    try {
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      ta.style.position = "fixed";
-      ta.style.opacity = "0";
-      document.body.appendChild(ta);
-      ta.focus();
-      ta.select();
-      const ok = document.execCommand("copy");
-      document.body.removeChild(ta);
-      return ok;
-    } catch (_) {
-      return false;
-    }
+    return false;
   }
 }
 
@@ -313,7 +323,7 @@ function ComposerInner({ payload, exp, ctx }) {
             />
           </div>
         ) : (
-          <div style={{ display: "flex", gap: 10, alignItems: "stretch" }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
             {/* Left column — notes + one action button. The built prompt is
                 copied, not displayed: there is nothing to edit in it. */}
             <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
@@ -321,7 +331,7 @@ function ComposerInner({ payload, exp, ctx }) {
                 {editExisting ? "Changes / instructions" :
                  isFinal      ? "Themes to emphasize" : "Your notes"}
               </FieldLabel>
-              <div className="mono-box" style={{ ...boxStyle, flex: 1 }}>
+              <div className="mono-box" style={boxStyle}>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
@@ -351,7 +361,7 @@ function ComposerInner({ payload, exp, ctx }) {
               <FieldLabel>
                 {isManual ? "Paste AI's response" : "Result"}
               </FieldLabel>
-              <div className="mono-box" style={{ ...boxStyle, flex: 1 }}>
+              <div className="mono-box" style={boxStyle}>
                 <textarea
                   value={result}
                   onChange={(e) => setResult(e.target.value)}

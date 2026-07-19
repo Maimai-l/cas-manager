@@ -54,6 +54,7 @@
     status:       () => get("/api/status"),
     getConfig:    () => get("/api/config"),
     saveConfig:   (cfg) => post("/api/config", cfg),
+    copyClipboard: (text) => post("/api/clipboard", { text }),
 
     // ── Login ───────────────────────────────────────────────────────────
     loginStatus:  () => get("/api/login/status"),

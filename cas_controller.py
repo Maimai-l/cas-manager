@@ -417,6 +417,38 @@ def ctrl_create_album_bytes(
                                 date=date_str)
 
 
+def ctrl_copy_to_clipboard(text: str) -> bool:
+    """Write text to the OS clipboard from the app process.
+
+    Browser clipboard APIs (navigator.clipboard / execCommand) require a live
+    user gesture, which is gone by the time an async "Copy prompt" finishes its
+    network round-trip — so they fail inside the webview. Writing from the
+    Python side sidesteps that entirely. Returns True on success."""
+    import subprocess
+    import sys
+    from shutil import which
+
+    data = (text or "").encode("utf-8")
+    if sys.platform == "darwin":
+        cmd = ["pbcopy"]
+    elif sys.platform.startswith("win"):
+        cmd = ["clip"]
+    else:
+        cmd = None
+        for c in (["xclip", "-selection", "clipboard"],
+                  ["xsel", "--clipboard", "--input"], ["wl-copy"]):
+            if which(c[0]):
+                cmd = c
+                break
+        if cmd is None:
+            return False
+    try:
+        p = subprocess.run(cmd, input=data, timeout=5)
+        return p.returncode == 0
+    except Exception:
+        return False
+
+
 def ctrl_create_file_evidence(
     cas_id: int,
     files: list[tuple[str, bytes]],   # (filename, data)
