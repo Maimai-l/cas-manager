@@ -12,74 +12,59 @@ const StrandTag = window.MonoStrandTag;
 const API = window.API;
 const HUB_SEP = window.MONO_SEP || "1px solid rgba(0,0,0,0.10)";
 
-// ── Settings — full-page inline panel (not a floating modal) ────────────
-function SettingsModal({ tab = "account", onTab }) {
+// ── Settings — full-page inline panel, everything laid out at once ──────
+function SettingsModal() {
   const ctx = React.useContext(window.MonoCtx);
   const BG = window.MONO_BG;
+  const col = { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 22 };
   return (
     <div className="mono-fade" style={{
       position: "absolute", inset: 0, zIndex: 40,
       background: BG.main,
       display: "flex", flexDirection: "column",
     }}>
-      {/* 42px header — matches the app toolbars */}
+      {/* 42px header — matches the app toolbars; close on the right */}
       <div style={{
         height: 42, flexShrink: 0, boxSizing: "border-box",
-        padding: "0 14px", borderBottom: HUB_SEP,
+        padding: "0 12px 0 16px", borderBottom: HUB_SEP,
         display: "flex", alignItems: "center", gap: 8,
         background: BG.bar,
       }}>
         <I name="settings" size={14} stroke={1.7} style={{ color: N.inkMid }} />
         <span style={{ fontSize: 12.5, fontWeight: 500, color: N.inkDeep }}>Settings</span>
         <div style={{ flex: 1 }} />
-        <Btn primary onClick={ctx.close}>Done</Btn>
+        <button onClick={ctx.close} className="mono-close" title="Close settings" style={{
+          width: 24, height: 24, borderRadius: "50%", border: "none",
+          background: "rgba(0,0,0,0.06)", color: "rgba(20,20,20,0.65)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer", fontFamily: "inherit",
+        }}>
+          <I name="close" size={11} stroke={2} />
+        </button>
       </div>
 
-      {/* tab column + pane */}
-      <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
-        <div style={{
-          width: 168, flexShrink: 0, padding: "12px 8px",
-          background: BG.sidebar,
-          borderRight: HUB_SEP,
-          display: "flex", flexDirection: "column", gap: 2
-        }}>
-          <SettingsTab icon="user"     label="Account"  active={tab === "account"}  onClick={() => onTab && onTab("account")} />
-          <SettingsTab icon="sparkle"  label="AI"       active={tab === "ai"}       onClick={() => onTab && onTab("ai")} />
-          <SettingsTab icon="pen"      label="Prompts"  active={tab === "prompts"}  onClick={() => onTab && onTab("prompts")} />
-          <SettingsTab icon="settings" label="General"  active={tab === "general"}  onClick={() => onTab && onTab("general")} />
-          <SettingsTab icon="trash"    label="Danger"   active={tab === "danger"}   onClick={() => onTab && onTab("danger")} />
-        </div>
-
-        <div key={tab} className="mono-fade"
-             style={{ flex: 1, padding: "20px 26px", display: "flex", flexDirection: "column",
-                      gap: 18, overflow: "auto", maxWidth: 720 }}>
-          {tab === "account" && <AccountPane />}
-          {tab === "ai"      && <AIProviderPane />}
-          {tab === "prompts" && <PromptsPane />}
-          {tab === "general" && <GeneralPane />}
-          {tab === "danger"  && <DangerPane />}
+      {/* Everything at once — two columns, no tab switching */}
+      <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: "22px 26px" }}>
+        <div style={{ display: "flex", gap: 40, alignItems: "flex-start", maxWidth: 1120, margin: "0 auto" }}>
+          <div style={col}>
+            <AccountPane />
+            <Divider />
+            <AIProviderPane />
+            <Divider />
+            <GeneralPane />
+            <Divider />
+            <DangerPane />
+          </div>
+          <div style={{ ...col, borderLeft: HUB_SEP, paddingLeft: 40 }}>
+            <PromptsPane />
+          </div>
         </div>
       </div>
     </div>);
 }
 
-function SettingsTab({ icon, label, active, onClick }) {
-  return (
-    <div
-      onClick={onClick}
-      className="mono-settings-tab"
-      style={{
-        display: "flex", alignItems: "center", gap: 9,
-        padding: "7px 10px", borderRadius: 5,
-        fontSize: 12, fontWeight: 500,
-        color: active ? N.inkDeep : N.inkMid,
-        background: active ? "rgba(0,0,0,0.07)" : "transparent",
-        cursor: "pointer",
-        transition: "background 0.12s"
-      }}>
-      <I name={icon} size={13} stroke={1.7} />
-      <span>{label}</span>
-    </div>);
+function Divider() {
+  return <div style={{ height: 1, background: "rgba(60,48,30,0.13)" }} />;
 }
 
 // ── Account: login or re-login ─────────────────────────────────────────
@@ -119,8 +104,8 @@ function LoggedInBlock() {
     <div style={{
       padding: "12px 14px",
       background: "#fff",
-      borderRadius: 5,
-      boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)",
+      borderRadius: 0,
+      boxShadow: "inset 0 0 0 1px rgba(60,48,30,0.13)",
       display: "flex", alignItems: "center", gap: 12
     }}>
       <div style={{
@@ -180,9 +165,9 @@ function LoginForm({ onCancel }) {
   return (
     <div style={{
       padding: "14px 14px 12px",
-      background: "#fafafa",
-      borderRadius: 5,
-      boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
+      background: "#faf8f4",
+      borderRadius: 0,
+      boxShadow: "inset 0 0 0 1px rgba(60,48,30,0.13)",
       display: "flex", flexDirection: "column", gap: 10
     }}>
       <FieldLabel hint="In the form of https://<school>.managebac.cn / .com / .org">
@@ -321,7 +306,7 @@ function AIProviderPane() {
       </div>
 
       <div style={{ fontSize: 10.5, color: N.inkSoft, lineHeight: 1.5 }}>
-        Want to customize the AI's writing style, word limit, required LOs to cover, etc.？Open the <b>Prompts</b> tab.
+        Want to customize the AI's writing style, word limit, required LOs to cover, etc.? See <b>System prompts</b> on the right.
       </div>
 
       {saving && <div style={{ fontSize: 11, color: N.inkMid }}>Saving…</div>}
@@ -449,9 +434,9 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
 
   return (
     <div style={{
-      borderRadius: 5,
+      borderRadius: 0,
       background: "#fff",
-      boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)",
+      boxShadow: "inset 0 0 0 1px rgba(60,48,30,0.13)",
       overflow: "hidden",
       transition: "background 0.12s"
     }}>
@@ -515,9 +500,9 @@ function PromptSlot({ data, open, onToggle, onChanged }) {
             {showDefault && (
               <div style={{
                 marginTop: 6, padding: "10px 12px",
-                background: "#fafafa",
-                borderRadius: 5,
-                boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
+                background: "#faf8f4",
+                borderRadius: 0,
+                boxShadow: "inset 0 0 0 1px rgba(60,48,30,0.13)",
                 fontSize: 11.5, lineHeight: 1.55,
                 color: N.inkMid,
                 whiteSpace: "pre-wrap", wordBreak: "break-word",
@@ -614,9 +599,9 @@ function ProviderCard({ name, sub, icon, active, onClick }) {
       data-active={active ? "1" : undefined}
       style={{
         flex: 1, padding: "12px 12px 10px",
-        borderRadius: 5, cursor: "pointer",
-        background: "#fff",
-        boxShadow: active ? `inset 0 0 0 1.5px rgba(20,20,20,0.8)` : "inset 0 0 0 1px rgba(0,0,0,0.12)",
+        borderRadius: 0, cursor: "pointer",
+        background: active ? "rgba(60,48,30,0.05)" : "#fff",
+        boxShadow: active ? `inset 0 0 0 1.5px rgba(20,20,20,0.8)` : "inset 0 0 0 1px rgba(60,48,30,0.13)",
         transition: "background 0.12s, box-shadow 0.12s"
       }}>
       <div style={{
@@ -684,9 +669,9 @@ function GeneralPane() {
       <div>
         <FieldLabel>Database stats</FieldLabel>
         <div style={{
-          padding: "10px 12px", borderRadius: 5,
+          padding: "10px 12px", borderRadius: 0,
           background: "#fff",
-          boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)",
+          boxShadow: "inset 0 0 0 1px rgba(60,48,30,0.13)",
           fontSize: 11.5, color: N.ink, lineHeight: 1.6, fontFamily: "ui-monospace, SF Mono, monospace"
         }}>
           {ctx.status && ctx.status.stats
@@ -721,7 +706,7 @@ Deletion cannot be undone — only enable this when you are <i>absolutely sure</
       </div>
       <div style={{
         padding: "14px 16px",
-        borderRadius: 5,
+        borderRadius: 0,
         background: "rgba(216,80,74,0.06)",
         boxShadow: "inset 0 0 0 1px rgba(216,80,74,0.35)",
         display: "flex", alignItems: "center", gap: 12
@@ -843,14 +828,15 @@ function PlaceholderHubPanel() {
 
   const open = !!ctx.hubOpen;
   const BG = window.MONO_BG;
+  const FROST = window.MONO_FROST;
 
   // One container whose width animates between the 30px strip and the
   // 300px panel — the strip literally grows into the panel.
   return (
     <div style={{
       width: open ? 300 : 30, flexShrink: 0,
-      transition: "width 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.22s",
-      background: open ? BG.bar : BG.sidebar,
+      transition: "width 0.22s cubic-bezier(0.2, 0.8, 0.2, 1)",
+      ...FROST,
       borderLeft: HUB_SEP,
       display: "flex", flexDirection: "column", overflow: "hidden",
     }}>
