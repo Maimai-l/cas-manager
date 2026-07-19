@@ -39,6 +39,7 @@ _CONFIG_DEFAULTS = {
     "lo_ids": [],
     "ai_provider": "prompt",
     "ai_model": "deepseek-chat",
+    "deepseek_api_key": "",
     "ollama_model": "llama3.2",
     "ollama_url": "http://localhost:11434",
     "backup_dir": "mb_backup_out",

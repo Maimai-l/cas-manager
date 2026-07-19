@@ -173,15 +173,15 @@ def _ai_via_anthropic(system: str, user: str, model: str) -> str:
     return msg.content[0].text.strip()
 
 
-def _ai_via_deepseek(system: str, user: str, model: str) -> str:
-    """Call DeepSeek's OpenAI-compatible chat endpoint. Cheap and the sane
-    default for students. Needs DEEPSEEK_API_KEY in the environment."""
+def _ai_via_deepseek(system: str, user: str, model: str, api_key: str = "") -> str:
+    """Call DeepSeek's OpenAI-compatible chat endpoint. The API key comes
+    from Settings (stored in config); falls back to DEEPSEEK_API_KEY env."""
     import json as _json
     import os
     import urllib.request
-    key = os.environ.get("DEEPSEEK_API_KEY")
+    key = (api_key or "").strip() or os.environ.get("DEEPSEEK_API_KEY")
     if not key:
-        raise RuntimeError("DeepSeek provider needs DEEPSEEK_API_KEY in your environment")
+        raise RuntimeError("Add your DeepSeek API key in Settings → AI provider")
     payload = _json.dumps({
         "model": model or "deepseek-chat",
         "messages": [
@@ -261,7 +261,8 @@ def ai_generate(notes: str, model: str,
         )
     if provider == "anthropic":
         return _ai_via_anthropic(system, user, model)
-    return _ai_via_deepseek(system, user, model or "deepseek-chat")
+    return _ai_via_deepseek(system, user, model or "deepseek-chat",
+                            cfg.get("deepseek_api_key", ""))
 
 
 def ai_generate_final(notes: str, model: str,
