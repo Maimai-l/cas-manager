@@ -63,6 +63,7 @@
     // ── Experiences ─────────────────────────────────────────────────────
     experiences:  () => get("/api/experiences"),
     experience:   (id) => get(`/api/experiences/${id}`),
+    syncExperiences: () => post("/api/sync/experiences", {}),  // list only (fast)
     syncAll:      () => post("/api/sync/all", {}),
     syncOne:      (id) => post(`/api/sync/${id}`, {}),
 

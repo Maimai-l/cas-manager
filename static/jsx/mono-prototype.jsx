@@ -10,6 +10,10 @@ function Prototype() {
   // Composer; the Placeholder Hub is a collapsible right side panel.
   const [modal, setModal] = React.useState(null);
   const [activeId, setActiveId] = React.useState(null);
+  // Mirror activeId in a ref so callbacks can read the latest value without
+  // taking activeId as a dependency (keeps them stable).
+  const activeIdRef = React.useRef(null);
+  React.useEffect(() => { activeIdRef.current = activeId; }, [activeId]);
   const [settingsTab, setSettingsTab] = React.useState("account");
 
   // Composer payload: null (hidden) | { mode, casId, rid?, date?,
@@ -84,6 +88,39 @@ function Prototype() {
     }
   }, []);
 
+  // Populate the sidebar fast, then full-sync in the background. Experiences
+  // are always reloaded (even if a sync throws) and the first is selected if
+  // nothing is active — so a mid-sync error can never leave an empty sidebar.
+  const bootSync = React.useCallback(async () => {
+    const selectFirst = (exps) => {
+      if (exps.length && !activeIdRef.current) {
+        const first = exps.find((e) => !e.is_completed) || exps[0];
+        if (first) setActiveId(first.id);
+      }
+    };
+    // 1. Show whatever is already cached
+    selectFirst(await loadExperiences());
+    // 2. Fast: fetch just the experience list so the sidebar fills right away
+    setSyncState("syncing");
+    try {
+      await API.syncExperiences();
+      selectFirst(await loadExperiences());
+    } catch (e) {
+      if (String(e.message).includes("session")) setAppState("unauthed");
+    }
+    // 3. Full sync (reflections + photos) in the background
+    try {
+      await API.syncAll();
+      setSyncState("idle");
+    } catch (e) {
+      setSyncState("error");
+      if (String(e.message).includes("session")) setAppState("unauthed");
+    } finally {
+      selectFirst(await loadExperiences());
+      await loadQueue();
+    }
+  }, [loadExperiences, loadQueue]);
+
   // ── Boot sequence ───────────────────────────────────────────────────────
   React.useEffect(() => {
     (async () => {
@@ -91,24 +128,7 @@ function Prototype() {
       await loadConfig();
       if (!s.logged_in) { setAppState("unauthed"); return; }
       setAppState("ok");
-      const exps = await loadExperiences();
-      await loadQueue();
-      // pick the first non-completed experience by default
-      if (exps.length) {
-        const first = exps.find((e) => !e.is_completed) || exps[0];
-        if (first) setActiveId(first.id);
-      }
-      // Background sync
-      setSyncState("syncing");
-      try {
-        await API.syncAll();
-        await loadExperiences();
-        await loadQueue();
-        setSyncState("idle");
-      } catch (e) {
-        setSyncState("error");
-        if (String(e.message).includes("session")) setAppState("unauthed");
-      }
+      await bootSync();
     })();
   }, []);
 
@@ -170,22 +190,9 @@ function Prototype() {
     if (s.logged_in) {
       setAppState("ok");
       await loadConfig();
-      const exps = await loadExperiences();
-      if (exps.length && !activeId) {
-        const first = exps.find((e) => !e.is_completed) || exps[0];
-        if (first) setActiveId(first.id);
-      }
-      setSyncState("syncing");
-      try {
-        await API.syncAll();
-        await loadExperiences();
-        await loadQueue();
-        setSyncState("idle");
-      } catch (_) {
-        setSyncState("error");
-      }
+      await bootSync();
     }
-  }, [activeId, loadConfig, loadExperiences, loadQueue, loadStatus]);
+  }, [loadStatus, loadConfig, bootSync]);
 
   const updateConfig = React.useCallback(async (patch) => {
     const next = { ...config, ...patch };
@@ -238,7 +245,7 @@ function Prototype() {
     // setters
     setActiveId, setModalPayload,
     // mutations
-    syncOne, syncAll, updateConfig, refreshAfterMutation, onLoginSuccess,
+    syncOne, syncAll, updateConfig, refreshAfterMutation, onLoginSuccess, bootSync,
     loadReflections, loadExperiences, loadQueue, loadStatus,
   };
 
