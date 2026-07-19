@@ -19,6 +19,10 @@
   #mono-proto-root { height: 100%; }
   .tnum { font-variant-numeric: tabular-nums; }
   button { font-family: inherit; }
+  /* Text is selectable/copyable everywhere (pywebview's window also sets
+     text_select=True). Controls opt out so button labels don't select. */
+  html, body { -webkit-user-select: text; user-select: text; }
+  button, .mono-close, .mono-tray { -webkit-user-select: none; user-select: none; }
 
   /* ── Motion — small, fast, consistent (150–220ms) ─────────────────────
      One easing curve everywhere; disabled entirely for reduced-motion. */

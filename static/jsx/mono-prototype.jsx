@@ -271,7 +271,7 @@ function Prototype() {
           dotKind={dotKind}
           appState={appState}
           onSelect={setActiveId}
-          onOpenJournal={() => openComposer({ mode: "write", casId: activeId })}
+          onOpenJournal={() => openComposer({ mode: "ai", casId: activeId })}
           onOpenSettings={() => setModal("settings")}
           onOpenPlaceholders={toggleHub}
           onEditRefl={(r) => {
