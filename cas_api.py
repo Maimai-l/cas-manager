@@ -154,7 +154,7 @@ def scan_experiences(html: str) -> list[Experience]:
     seen: set[int] = set()
 
     for card in soup.select("div.fusion-card-item.activity-tile"):
-        link = card.select_one("h4.title a[href]")
+        link = card.select_one(".title a[href]")
         if not link:
             continue
         m = _EXP_ID_RE.search(link["href"])

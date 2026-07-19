@@ -189,6 +189,7 @@ def main():
         width=1280, height=820,
         min_size=(900, 600),
         confirm_close=False,
+        text_select=True,
     )
     # debug=True enables the WebKit inspector, but on several platforms it
     # also AUTO-OPENS the DevTools window on launch — so it's opt-in now:
