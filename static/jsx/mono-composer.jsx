@@ -61,7 +61,7 @@ const boxStyle = {
   boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)",
 };
 
-// Small button that flips to "Copied ✓" / "Copy failed" for a moment.
+// Small button that flips to "Copied" / "Copy failed" for a moment.
 function CopyBtn({ getText, label = "Copy", primary, icon = "copy", disabled, onBefore }) {
   const [state, setState] = React.useState(null); // null | "ok" | "fail"
   async function handle() {
@@ -77,7 +77,7 @@ function CopyBtn({ getText, label = "Copy", primary, icon = "copy", disabled, on
     setState(ok ? "ok" : "fail");
     setTimeout(() => setState(null), 1600);
   }
-  // Fixed width so the label swap (Copy prompt → Copied ✓) never reflows
+  // Fixed width so the label swap (Copy prompt / Copied) never reflows
   // the row around it.
   const anchored = { width: 118, justifyContent: "center", whiteSpace: "nowrap" };
   return (
@@ -86,7 +86,7 @@ function CopyBtn({ getText, label = "Copy", primary, icon = "copy", disabled, on
          style={state === "fail"
            ? { ...anchored, background: "rgba(216,80,74,0.12)", color: "#a4332e" }
            : anchored}>
-      {state === "ok" ? "Copied ✓" : state === "fail" ? "Copy failed" : label}
+      {state === "ok" ? "Copied" : state === "fail" ? "Copy failed" : label}
     </Btn>
   );
 }
