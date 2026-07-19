@@ -49,9 +49,12 @@ def _err(msg: str, code: int = 400):
 
 def _strip_html(html: str) -> str:
     """Strip HTML tags and decode entities to plain text.
-    Must unescape entities FIRST (e.g. &lt;p&gt; → <p>), then strip tags."""
+    Must unescape entities FIRST (e.g. &lt;p&gt; → <p>), then strip tags.
+    Also drops the hidden stealth-placeholder marker so it never surfaces in
+    previews or copied text."""
     import html as _h
     decoded = _h.unescape(html or "")            # &lt;p&gt; → <p>
+    decoded = decoded.replace(cas_api.PLACEHOLDER_MARKER, "")
     text    = re.sub(r"<[^>]+>", " ", decoded)   # <p> → space
     return " ".join(text.split())
 

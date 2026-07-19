@@ -810,8 +810,10 @@ function PlaceholderHubPanel() {
     });
   }
 
-  // Combine schedules with all experiences so users can enable new ones
-  const activeExps = (ctx.experiences || []).filter((e) => !e.is_completed);
+  // Combine schedules with active experiences so users can enable new ones
+  // (completed = locked on ManageBac; deleted = gone — neither can take a
+  // placeholder, so keep them out of the schedule list too).
+  const activeExps = (ctx.experiences || []).filter((e) => !e.is_completed && !e.is_deleted);
   const schedByCas = {}; (schedules || []).forEach((s) => { schedByCas[s.cas_id] = s; });
   const fullSchedList = activeExps.map((e) => {
     const s = schedByCas[e.id];
@@ -822,6 +824,7 @@ function PlaceholderHubPanel() {
 
 
   const open = !!ctx.hubOpen;
+  const BG = window.MONO_BG;
 
   // One container whose width animates between the 30px strip and the
   // 300px panel — the strip literally grows into the panel.
@@ -829,7 +832,7 @@ function PlaceholderHubPanel() {
     <div style={{
       width: open ? 300 : 30, flexShrink: 0,
       transition: "width 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.22s",
-      background: open ? "#fafafa" : "#f4f4f3",
+      background: open ? BG.bar : BG.sidebar,
       borderLeft: HUB_SEP,
       display: "flex", flexDirection: "column", overflow: "hidden",
     }}>
@@ -880,11 +883,10 @@ function PlaceholderHubPanel() {
         <I name="chevron" size={11} stroke={1.8} style={{ color: N.inkSoft }} />
       </div>
 
-      {/* Queue zone */}
-      <div style={{ flex: 1, overflow: "auto", padding: "10px 12px",
-                    display: "flex", flexDirection: "column", gap: 6 }}>
+      {/* Queue zone — full-bleed rows joined by hairlines */}
+      <div style={{ flex: 1, overflow: "auto" }}>
         {!loading && !queue.length && (
-          <div style={{ fontSize: 11, color: N.inkSoft, padding: "4px 2px" }}>
+          <div style={{ fontSize: 11, color: N.inkSoft, padding: "10px 12px" }}>
             No pending placeholders.
           </div>
         )}
@@ -904,21 +906,16 @@ function PlaceholderHubPanel() {
             />
           );
         })}
-        <div style={{ flex: 1 }} />
-        <Btn onClick={runAllDue} disabled={loading}
-             style={{ alignSelf: "flex-end" }}>▶ Run all due</Btn>
       </div>
 
       {/* Schedules zone — separated by a solid divider, no header */}
       <div style={{
         borderTop: HUB_SEP,
         maxHeight: "45%", overflow: "auto",
-        padding: "10px 12px",
-        display: "flex", flexDirection: "column", gap: 6,
-        background: "#f4f4f3",
+        background: BG.sidebar,
       }}>
         {!loading && !fullSchedList.length && (
-          <div style={{ fontSize: 11, color: N.inkSoft }}>No active experiences.</div>
+          <div style={{ fontSize: 11, color: N.inkSoft, padding: "10px 12px" }}>No active experiences.</div>
         )}
         {fullSchedList.map((s) =>
           <ScheduleRow
@@ -935,9 +932,20 @@ function PlaceholderHubPanel() {
             onRunNow={() => runOne(s.cas_id)}
           />
         )}
-        {error && (
-          <div style={{ fontSize: 10.5, color: "#a4332e" }}>⚠ {error}</div>
-        )}
+      </div>
+
+      {/* Footer bar — aligned with the composer/settings footers */}
+      <div style={{
+        height: 42, flexShrink: 0, boxSizing: "border-box",
+        padding: "0 12px", borderTop: HUB_SEP,
+        display: "flex", alignItems: "center", gap: 8,
+        background: BG.bar,
+      }}>
+        {error && <span style={{ fontSize: 10.5, color: "#a4332e", flex: 1,
+                                 overflow: "hidden", textOverflow: "ellipsis",
+                                 whiteSpace: "nowrap" }}>⚠ {error}</span>}
+        <div style={{ flex: 1 }} />
+        <Btn onClick={runAllDue} disabled={loading}>▶ Run all due</Btn>
       </div>
     </div>);
   }
@@ -967,10 +975,8 @@ function Toggle({ on, onClick }) {
 function ScheduleRow({ exp, strands, everyDays, next, on, onToggle, onStep, onRunNow }) {
   return (
     <div className="mono-schedule-row" style={{
-      padding: "10px 12px", borderRadius: 5,
-      background: "#fff",
-      boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
-      opacity: on ? 1 : 0.65,
+      padding: "10px 12px", borderBottom: HUB_SEP,
+      opacity: on ? 1 : 0.6,
       display: "flex", flexDirection: "column", gap: 8,
       flexShrink: 0,
       transition: "background 0.15s"
@@ -1027,7 +1033,8 @@ function QueueRow({ date, strands, exp, preview, onStart }) {
   const previewText = React.useMemo(() => {
     const d = document.createElement("div");
     d.innerHTML = preview || "";
-    const t = (d.textContent || "").trim();
+    // Drop the hidden stealth-placeholder marker so it never leaks into text
+    let t = (d.textContent || "").replace(/casmgr-ph/g, "").trim();
     return t.length > 80 ? t.slice(0, 80) + "…" : t;
   }, [preview]);
   return (
@@ -1036,9 +1043,7 @@ function QueueRow({ date, strands, exp, preview, onStart }) {
       onClick={onStart}
       style={{
         display: "flex", alignItems: "center", gap: 10,
-        padding: "9px 12px", borderRadius: 5,
-        background: "#fff",
-        boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.10)",
+        padding: "9px 12px", borderBottom: HUB_SEP,
         flexShrink: 0,
         cursor: "pointer", transition: "background 0.15s"
       }}>

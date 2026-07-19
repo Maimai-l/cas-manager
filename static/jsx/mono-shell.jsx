@@ -7,8 +7,18 @@ const A = window.MONO_ACCENT;
 const N = window.MONO_NEUTRALS;
 const S = window.MONO_STRAND;
 
-const SEP = "1px solid rgba(0,0,0,0.10)";   // column / section separator
-const R   = 5;                               // control corner radius
+// Warm neutral palette — a paper-white system, not cold gray. Borders and
+// fills carry a faint warm tint so the flat surfaces read alive, not ashen.
+const BG = {
+  sidebar: "#f3f1ec",   // warm paper
+  bar:     "#f8f6f1",   // toolbars / docks / footers
+  main:    "#fffefc",   // content
+  hover:   "rgba(60,48,30,0.05)",
+  active:  "rgba(60,48,30,0.09)",
+};
+const SEP = "1px solid rgba(60,48,30,0.13)";   // warm hairline separator
+const R   = 5;                                  // control corner radius
+window.MONO_BG = BG;
 
 // Pull the experience's strand list as a canonical-order array of valid keys.
 // Falls back to ["activity"] if nothing usable is present so the existing
@@ -210,15 +220,21 @@ function Sidebar({ experiences, activeId, onSelect, syncState }) {
   return (
     <div style={{
       width: 230, flexShrink: 0,
-      background: "#f4f4f3",
+      background: BG.sidebar,
       borderRight: SEP,
       display: "flex", flexDirection: "column", overflow: "hidden"
     }}>
-      <div style={{ padding: "10px 10px 8px" }}>
+      {/* 42px header — aligns with the main toolbar + hub header so the top
+          separator is one continuous line across all three columns */}
+      <div style={{
+        height: 42, flexShrink: 0, boxSizing: "border-box",
+        padding: "0 10px", display: "flex", alignItems: "center",
+        borderBottom: SEP,
+      }}>
         <div style={{
-          display: "flex", alignItems: "center", gap: 6,
+          flex: 1, display: "flex", alignItems: "center", gap: 6,
           height: 26, padding: "0 8px",
-          background: "rgba(0,0,0,0.055)",
+          background: "rgba(60,48,30,0.06)",
           borderRadius: R + 1,
           fontSize: 11.5,
         }}>
@@ -236,7 +252,7 @@ function Sidebar({ experiences, activeId, onSelect, syncState }) {
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", padding: "2px 0 10px" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "4px 0 10px" }}>
         {active.map((e) =>
           <SidebarItem key={e.id} exp={e} active={e.id === activeId} onClick={() => onSelect(e.id)} />
         )}
@@ -245,28 +261,25 @@ function Sidebar({ experiences, activeId, onSelect, syncState }) {
             {syncState === "syncing" ? "Syncing experiences…" : "No experiences yet."}
           </div>
         )}
-        {completed.length > 0 && (
-          <div style={{
-            margin: "10px 14px 4px", paddingTop: 8,
-            borderTop: SEP,
-            fontSize: 10.5, color: N.inkSoft
-          }}>Completed</div>
-        )}
+        {completed.length > 0 && <SectionLabel>Completed</SectionLabel>}
         {completed.map((e) =>
           <SidebarItem key={e.id} exp={e} active={e.id === activeId} onClick={() => onSelect(e.id)} />
         )}
-        {deleted.length > 0 && (
-          <div style={{
-            margin: "10px 14px 4px", paddingTop: 8,
-            borderTop: SEP,
-            fontSize: 10.5, color: "#a4332e"
-          }}>Deleted</div>
-        )}
+        {deleted.length > 0 && <SectionLabel danger>Deleted</SectionLabel>}
         {deleted.map((e) =>
           <SidebarItem key={e.id} exp={e} active={e.id === activeId} onClick={() => onSelect(e.id)} />
         )}
       </div>
     </div>);
+}
+
+function SectionLabel({ children, danger }) {
+  return (
+    <div style={{
+      padding: "12px 14px 5px", marginTop: 4,
+      borderTop: SEP,
+      fontSize: 10.5, color: danger ? "#a4332e" : N.inkSoft,
+    }}>{children}</div>);
 }
 
 function SidebarItem({ exp, active, onClick }) {
@@ -286,9 +299,9 @@ function SidebarItem({ exp, active, onClick }) {
       title={isDeleted ? "Not seen in the latest ManageBac sync" : undefined}
       style={{
         display: "flex", alignItems: "center", gap: 9,
-        padding: "7px 10px", borderRadius: R + 1,
-        margin: "1px 6px", cursor: "pointer",
-        background: active ? "rgba(0,0,0,0.08)" : "transparent",
+        padding: "8px 12px", cursor: "pointer",
+        background: active ? BG.active : "transparent",
+        boxShadow: active ? ("inset 2px 0 0 0 " + A.solid) : "none",
         opacity: isDeleted ? 0.5 : 1,
         transition: "background 0.12s, opacity 0.12s"
       }}>
@@ -336,7 +349,7 @@ function Toolbar({ dotKind, onOpenSettings, children }) {
       display: "flex", alignItems: "center", gap: 8,
       padding: "0 14px",
       borderBottom: SEP,
-      background: "#fafafa",
+      background: BG.bar,
     }}>
       <span
         title={`Status: ${dotLabel}`}
@@ -372,7 +385,7 @@ function MainPanel({
 }) {
   const frame = {
     flex: 1, minWidth: 0,
-    background: "#fff",
+    background: BG.main,
     display: "flex", flexDirection: "column", overflow: "hidden",
   };
 
@@ -424,6 +437,7 @@ function MainPanel({
       <div style={{
         padding: "14px 22px 12px",
         borderBottom: SEP,
+        background: BG.main,
         flexShrink: 0,
       }}>
         <h2 style={{
@@ -611,7 +625,7 @@ function AppShell(props) {
       width: "100%", height: "100%",
       display: "flex", alignItems: "stretch",
       overflow: "hidden",
-      background: "#fff"
+      background: BG.main
     }}>
       <Sidebar
         experiences={props.experiences}
