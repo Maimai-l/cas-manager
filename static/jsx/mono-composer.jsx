@@ -327,7 +327,7 @@ function ComposerInner({ payload, exp, ctx }) {
             {/* Two boxes, aligned side by side. Each box's placeholder is the
                 hint — no separate label above (that just repeated it). */}
             <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-              <div className="mono-box" style={{ ...boxStyle, flex: 1, minWidth: 0, position: "relative" }}>
+              <div className="mono-box" style={{ ...boxStyle, flex: 1, minWidth: 0 }}>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
@@ -336,19 +336,8 @@ function ComposerInner({ payload, exp, ctx }) {
                     editExisting ? "What to change" :
                     isFinal      ? "Themes to emphasize" : "Your notes"
                   }
-                  style={{ ...taStyle(110), paddingBottom: 40 }}
+                  style={taStyle(110)}
                 />
-                {/* AI action anchored to the notes box's bottom-right corner */}
-                <div style={{ position: "absolute", right: 8, bottom: 8 }}>
-                  {isManual ? (
-                    <CopyBtn primary label="Copy prompt" icon="copy"
-                             disabled={!!loading || !canBuild}
-                             onBefore={buildPrompt} />
-                  ) : (
-                    <Btn primary icon="sparkle" onClick={generateDirect}
-                         disabled={!!loading || !canBuild}>Generate</Btn>
-                  )}
-                </div>
               </div>
               <div className="mono-box" style={{ ...boxStyle, flex: 1, minWidth: 0 }}>
                 <textarea
@@ -373,18 +362,33 @@ function ComposerInner({ payload, exp, ctx }) {
         )}
       </div>
 
-      {/* Footer */}
+      {/* Footer — two columns mirror the notes/result boxes above: the AI
+          action sits under the notes box (right edge), Cancel + Send under the
+          result box. In Write mode there's no AI action, just Cancel + Send. */}
       <div style={{
-        display: "flex", alignItems: "center", gap: 8,
+        display: "flex", gap: 10, alignItems: "center",
         padding: "8px 14px 10px",
       }}>
-        <StatusLine loading={loading} error={error} />
-        <div style={{ flex: 1 }} />
-        <Btn onClick={ctx.closeComposer} disabled={!!loading}>Cancel</Btn>
-        <Btn primary onClick={() => send(sendBody)}
-             disabled={!!loading || !sendBody.trim() || (isSA && !saQ)}>
-          {isSA ? "Save answer" : rid && !payload.isPlaceholderFill ? "Save to ManageBac" : "Send to ManageBac"}
-        </Btn>
+        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 8 }}>
+          <StatusLine loading={loading} error={error} />
+          <div style={{ flex: 1 }} />
+          {mode === "ai" && (isManual ? (
+            <CopyBtn primary label="Copy prompt" icon="copy"
+                     disabled={!!loading || !canBuild}
+                     onBefore={buildPrompt} />
+          ) : (
+            <Btn primary icon="sparkle" onClick={generateDirect}
+                 disabled={!!loading || !canBuild}>Generate</Btn>
+          ))}
+        </div>
+        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center",
+                      justifyContent: "flex-end", gap: 8 }}>
+          <Btn onClick={ctx.closeComposer} disabled={!!loading}>Cancel</Btn>
+          <Btn primary onClick={() => send(sendBody)}
+               disabled={!!loading || !sendBody.trim() || (isSA && !saQ)}>
+            {isSA ? "Save answer" : rid && !payload.isPlaceholderFill ? "Save to ManageBac" : "Send to ManageBac"}
+          </Btn>
+        </div>
       </div>
       </React.Fragment>
       )}
