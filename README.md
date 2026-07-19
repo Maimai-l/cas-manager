@@ -6,8 +6,8 @@ plate so the time goes back into the actual experiences.
 
 ## Features
 
-- **Placeholders.** Pre-creates the reflection entries for an experience — on a
-  schedule or all at once — so the boxes are already there to fill in later.
+- **Placeholders.** Pre-creates the reflection entries for an experience, on a
+  schedule or all at once. So the boxes are already there to fill in later.
 
 - **Prompts.** Turns rough notes into a reflection. It builds a prompt with
   the experience's goals and learning outcomes included, copies it for any AI
