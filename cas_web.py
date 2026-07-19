@@ -439,6 +439,15 @@ def api_create_album(cas_id: int):
     return _ok({"rid": rid})
 
 
+@app.route("/api/clipboard", methods=["POST"])
+def api_clipboard():
+    """Write text to the OS clipboard from the app process — the reliable copy
+    path when the webview's browser clipboard is blocked (no user gesture)."""
+    data = request.get_json(force=True) or {}
+    ok = ctrl.ctrl_copy_to_clipboard(data.get("text", ""))
+    return _ok({"copied": ok})
+
+
 @app.route("/api/experiences/<int:cas_id>/file", methods=["POST"])
 def api_create_file(cas_id: int):
     # Multipart: one or more attachments in "files" (each becomes its own
