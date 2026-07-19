@@ -90,7 +90,7 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='CAS Manager.app',
-    icon=None,            # add 'icon.icns' once we have one
+    icon='static/img/icon.icns',   # Facet mark — green tile + wireframe
     bundle_identifier='com.casmanager.app',
     info_plist={
         'NSHighResolutionCapable':       'True',

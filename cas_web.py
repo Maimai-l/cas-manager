@@ -252,8 +252,10 @@ def index():
 
 @app.route("/favicon.ico")
 def favicon():
-    # No favicon shipped — return 204 so browser requests don't 500 the log.
-    return "", 204
+    # Serve the Facet mark as the window/tab icon.
+    from flask import send_from_directory
+    return send_from_directory(cas_paths.STATIC_DIR / "img", "facet-icon.svg",
+                               mimetype="image/svg+xml")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
