@@ -421,15 +421,19 @@ def ctrl_create_file_evidence(
     cas_id: int,
     files: list[tuple[str, bytes]],   # (filename, data)
     lo_ids: Optional[list[int]] = None,
-    date_str: Optional[str] = None,
-) -> int:
-    """Upload in-memory files as a FileEvidence reflection. Returns new rid."""
+    body_html: str = "",
+) -> list[int]:
+    """Upload in-memory files as FileEvidence reflections. Each file becomes its
+    own evidence (FileEvidence holds a single asset). Returns the new rids."""
     s, base = ctrl_session()
     csrf = cas_api.get_csrf(s, f"{base}/student/ib/activity/cas")
     if lo_ids is None:
         lo_ids = ctrl_lo_ids_for(cas_id)
-    return cas_api.create_file_evidence(s, base, cas_id, csrf, lo_ids, files,
-                                        date=date_str)
+    rids: list[int] = []
+    for fname, fdata in files:
+        rids.append(cas_api.create_file_evidence(
+            s, base, cas_id, csrf, lo_ids, fname, fdata, body_html=body_html))
+    return rids
 
 
 def ctrl_get_album_photos(cas_id: int, rid: int) -> list[dict]:

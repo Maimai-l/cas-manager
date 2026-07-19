@@ -535,6 +535,7 @@ function fmtBytes(b) {
 
 function FilesPane({ casId, ctx }) {
   const [files, setFiles]       = React.useState([]);
+  const [note, setNote]         = React.useState("");
   const [dragging, setDragging] = React.useState(false);
   const fileRef = React.useRef(null);
   const { loading, error, run } = useAsyncOp();
@@ -548,7 +549,7 @@ function FilesPane({ casId, ctx }) {
   async function submit() {
     if (!files.length) return;
     await run(`Uploading ${files.length} file${files.length > 1 ? "s" : ""}…`, async () => {
-      await API.createFile(casId, files, null, null);
+      await API.createFile(casId, files, null, note);
       await ctx.refreshAfterMutation();
       ctx.closeComposer();
     });
@@ -558,6 +559,18 @@ function FilesPane({ casId, ctx }) {
     <React.Fragment>
       <div className="mono-fade" style={{ padding: "0 14px", overflow: "auto",
              display: "flex", flexDirection: "column", gap: 8 }}>
+        <div className="mono-field" style={{
+          background: "#fff", borderRadius: 5,
+          boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)",
+        }}>
+          <input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Note (optional)"
+            style={{ width: "100%", padding: "8px 11px", border: "none", outline: "none",
+                     background: "transparent", fontSize: 12.5, color: N.inkDeep, fontFamily: "inherit" }}
+          />
+        </div>
         <div
           onDragOver={(e) => { e.preventDefault(); if (!dragging) setDragging(true); }}
           onDragLeave={() => setDragging(false)}
