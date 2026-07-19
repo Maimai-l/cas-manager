@@ -225,6 +225,7 @@ function AIProviderPane() {
   const ctx = React.useContext(window.MonoCtx);
   const provider = (ctx.config && ctx.config.ai_provider) || "prompt";
   const model    = (ctx.config && ctx.config.ai_model) || "";
+  const apiKey   = (ctx.config && ctx.config.deepseek_api_key) || "";
   const ollamaModel  = (ctx.config && ctx.config.ollama_model) || "";
   const ollamaUrl    = (ctx.config && ctx.config.ollama_url) || "";
   const [saving, setSaving] = React.useState(false);
@@ -251,7 +252,21 @@ function AIProviderPane() {
       </div>
 
       <div>
-        <FieldLabel hint="DEEPSEEK_API_KEY in your environment">DeepSeek model</FieldLabel>
+        <FieldLabel>DeepSeek API key</FieldLabel>
+        <FieldShell mono style={{ padding: 0 }}>
+          <input
+            type="password"
+            value={apiKey}
+            onChange={(e) => ctx.updateConfig({ deepseek_api_key: e.target.value }).catch((err) => setError(err.message))}
+            placeholder="sk-…"
+            autoComplete="off"
+            style={inputStyle}
+          />
+        </FieldShell>
+      </div>
+
+      <div>
+        <FieldLabel>DeepSeek model</FieldLabel>
         <FieldShell mono style={{ padding: 0 }}>
           <input
             value={model}
