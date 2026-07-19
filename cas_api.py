@@ -139,13 +139,20 @@ def _kind_from_classes(classes: list) -> str:
 
 # ── Experiences list ─────────────────────────────────────────────────────────
 
-_EXP_ID_RE = re.compile(r"/student/ib/activity/cas/(\d+)$")
+_EXP_ID_RE = re.compile(r"/student/ib/activity/cas/(\d+)(?:[?#].*)?$")
 
 
 def scan_experiences(html: str) -> list[Experience]:
-    """Parse the CAS experiences list page → list of Experience."""
+    """Parse the CAS experiences list page → list of Experience.
+
+    Primary path reads the styled activity tiles (so completion state is
+    known). If the tile markup ever changes, fall back to scraping any link
+    that points at an experience detail page — losing only the completion
+    flag, never the whole list."""
     soup = BeautifulSoup(html, "html.parser")
     results: list[Experience] = []
+    seen: set[int] = set()
+
     for card in soup.select("div.fusion-card-item.activity-tile"):
         link = card.select_one("h4.title a[href]")
         if not link:
@@ -154,9 +161,30 @@ def scan_experiences(html: str) -> list[Experience]:
         if not m:
             continue
         cas_id = int(m.group(1))
+        if cas_id in seen:
+            continue
+        seen.add(cas_id)
         name = link.get_text(strip=True)
         is_completed = bool(card.select_one("svg.fi-cas-completed-inverted"))
         results.append(Experience(cas_id=cas_id, name=name, is_completed=is_completed))
+
+    if results:
+        return results
+
+    # Fallback: tiles not found (DOM changed). Grab every experience-detail
+    # link on the page and dedupe.
+    for a in soup.select('a[href*="/student/ib/activity/cas/"]'):
+        m = _EXP_ID_RE.search(a.get("href", ""))
+        if not m:
+            continue
+        cas_id = int(m.group(1))
+        if cas_id in seen:
+            continue
+        name = a.get_text(strip=True)
+        if not name:
+            continue
+        seen.add(cas_id)
+        results.append(Experience(cas_id=cas_id, name=name, is_completed=False))
     return results
 
 

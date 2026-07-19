@@ -208,9 +208,18 @@ def ctrl_get_experience(cas_id: int) -> Optional[dict]:
 def ctrl_fetch_experiences_from_web() -> list[dict]:
     """Fetch live experience list from ManageBac and cache in DB.
     Returns list of {cas_id, name, is_completed}."""
+    from cas_errors import ScraperError
     s, base = ctrl_session()
     exps = cas_api.fetch_experiences(s, base)
+    if not exps:
+        # A real account always has experiences — an empty list means the
+        # page couldn't be parsed. Surface it instead of silently showing
+        # "no experiences" (and never touch the cached list on this path).
+        raise ScraperError(
+            "Couldn't read your experiences from ManageBac — the list page "
+            "came back empty. Try again, or check /api/debug/experiences.")
     cas_db.init_db()
+    ids = [e.cas_id for e in exps]
     with cas_db.open_db() as conn:
         for exp in exps:
             cas_db.upsert_experience(
@@ -219,6 +228,10 @@ def ctrl_fetch_experiences_from_web() -> list[dict]:
                 name=exp.name,
                 is_completed=exp.is_completed,
             )
+        # Anything that came back is definitely live — clear any stale
+        # is_deleted flag (recovers a DB wrongly wiped by an earlier bug).
+        conn.executemany("UPDATE experiences SET is_deleted = 0 WHERE id = ?",
+                         [(i,) for i in ids])
     return [{"cas_id": e.cas_id, "name": e.name, "is_completed": e.is_completed}
             for e in exps]
 
@@ -293,8 +306,15 @@ def ctrl_sync_all(
     progress_cb: Optional[Callable[[str], None]] = None,
 ) -> list[dict]:
     """Sync all experiences.  Returns list of per-experience result dicts."""
+    from cas_errors import ScraperError
     s, base = ctrl_session()
     exps = cas_api.fetch_experiences(s, base)
+    if not exps:
+        # Empty fetch = parse/fetch failure, never "all experiences gone".
+        # Bail before the deletion reconcile so the cached list is untouched.
+        raise ScraperError(
+            "Couldn't read your experiences from ManageBac — the list page "
+            "came back empty. Try again, or check /api/debug/experiences.")
 
     # Store names and completion status immediately so they survive proposal failures
     cas_db.init_db()

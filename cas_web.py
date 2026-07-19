@@ -603,6 +603,30 @@ def api_ai_generate():
 
 # ══════════════════════════════════════════════════════════════════════════════
 
+@app.route("/api/debug/experiences")
+def api_debug_experiences():
+    """Fetch the experiences list page live and show what the scraper sees —
+    for diagnosing an empty sidebar. No DB writes."""
+    import cas_api
+    s, base = ctrl.ctrl_session()
+    url = f"{base}/student/ib/activity/cas"
+    r = s.get(url, timeout=30, allow_redirects=True)
+    exps = cas_api.scan_experiences(r.text)
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(r.text, "html.parser")
+    return _ok({
+        "url":               url,
+        "status_code":       r.status_code,
+        "redirected_to":     r.url,
+        "tile_selector_hits": len(soup.select("div.fusion-card-item.activity-tile")),
+        "cas_link_hits":     len(soup.select('a[href*="/student/ib/activity/cas/"]')),
+        "parsed_count":      len(exps),
+        "parsed":            [{"cas_id": e.cas_id, "name": e.name,
+                               "is_completed": e.is_completed} for e in exps],
+        "html_len":          len(r.text),
+    })
+
+
 @app.route("/api/debug/reflections/<int:cas_id>")
 def api_debug_reflections(cas_id: int):
     """Raw DB dump for diagnosing missing body_html / photos."""

@@ -292,6 +292,10 @@ def mark_experiences_deletion_state(conn: sqlite3.Connection,
     - Mark experiences in DB but not in live as is_deleted=1 (newly disappeared)
     - Mark experiences in live as is_deleted=0 (restored if they were marked deleted)
     Returns (newly_deleted_ids, restored_ids)."""
+    # Safety valve: an empty live set means the fetch/parse failed, NOT that
+    # the student deleted every experience. Never mark the whole list deleted.
+    if not live_cas_ids:
+        return [], []
     local = {r["id"]: r["is_deleted"] for r in conn.execute(
         "SELECT id, is_deleted FROM experiences"
     ).fetchall()}
