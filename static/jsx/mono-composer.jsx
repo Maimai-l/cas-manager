@@ -327,7 +327,7 @@ function ComposerInner({ payload, exp, ctx }) {
             {/* Two boxes, aligned side by side. Each box's placeholder is the
                 hint — no separate label above (that just repeated it). */}
             <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-              <div className="mono-box" style={{ ...boxStyle, flex: 1, minWidth: 0 }}>
+              <div className="mono-box" style={{ ...boxStyle, flex: 1, minWidth: 0, position: "relative" }}>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
@@ -336,8 +336,19 @@ function ComposerInner({ payload, exp, ctx }) {
                     editExisting ? "What to change" :
                     isFinal      ? "Themes to emphasize" : "Your notes"
                   }
-                  style={taStyle(110)}
+                  style={{ ...taStyle(110), paddingBottom: 40 }}
                 />
+                {/* AI action anchored to the notes box's bottom-right corner */}
+                <div style={{ position: "absolute", right: 8, bottom: 8 }}>
+                  {isManual ? (
+                    <CopyBtn primary label="Copy prompt" icon="copy"
+                             disabled={!!loading || !canBuild}
+                             onBefore={buildPrompt} />
+                  ) : (
+                    <Btn primary icon="sparkle" onClick={generateDirect}
+                         disabled={!!loading || !canBuild}>Generate</Btn>
+                  )}
+                </div>
               </div>
               <div className="mono-box" style={{ ...boxStyle, flex: 1, minWidth: 0 }}>
                 <textarea
@@ -367,16 +378,6 @@ function ComposerInner({ payload, exp, ctx }) {
         display: "flex", alignItems: "center", gap: 8,
         padding: "8px 14px 10px",
       }}>
-        {/* AI action sits at the left edge — vertically under the notes box —
-            while Cancel/Send stay on the right; all on one row. */}
-        {mode === "ai" && (isManual ? (
-          <CopyBtn primary label="Copy prompt" icon="copy"
-                   disabled={!!loading || !canBuild}
-                   onBefore={buildPrompt} />
-        ) : (
-          <Btn primary icon="sparkle" onClick={generateDirect}
-               disabled={!!loading || !canBuild}>Generate</Btn>
-        ))}
         <StatusLine loading={loading} error={error} />
         <div style={{ flex: 1 }} />
         <Btn onClick={ctx.closeComposer} disabled={!!loading}>Cancel</Btn>
