@@ -196,8 +196,18 @@ def main():
     #     CAS_DEBUG=1 python app.py     (or set it before opening the .app)
     debug = os.environ.get("CAS_DEBUG") == "1"
     log.info(f"webview debug (inspector): {debug}")
+    # Window icon: the macOS .app takes its icon from the bundle (build.spec),
+    # but the GTK backend can set one at runtime. icon= is unsupported on some
+    # backends/versions, so fall back to a plain start if it's rejected.
+    icon_png = cas_paths.STATIC_DIR / "img" / "facet-icon-1024.png"
     try:
-        webview.start(debug=debug)
+        webview.start(debug=debug, icon=str(icon_png))
+    except TypeError:
+        try:
+            webview.start(debug=debug)
+        except Exception:
+            log.exception("webview.start() raised")
+            sys.exit(1)
     except Exception:
         log.exception("webview.start() raised")
         sys.exit(1)
