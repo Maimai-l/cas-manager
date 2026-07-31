@@ -13,27 +13,29 @@ const { StatusLine, useAsyncOp, wrapPlainAsHtml, stripHtml,
         Dropzone, DeleteChip } = window.MonoHelpers;
 const API = window.API;
 
-// Clipboard with fallback — navigator.clipboard can fail inside pywebview,
-// and copying is a core operation here, so never fail silently.
+// Clipboard write. Inside pywebview's WebKit the browser APIs are unreliable:
+// navigator.clipboard needs a live user gesture (gone after "Copy prompt"
+// awaits its network build), and execCommand("copy") often returns true
+// WITHOUT actually writing — so trusting it reports "Copied" over an empty
+// clipboard. The Python side (pbcopy etc.) writes the real OS clipboard with no
+// gesture/permission caveats, so it is the PRIMARY path; the browser APIs are
+// only a fallback for a plain-browser dev session with no OS clipboard tool.
 async function copyTextToClipboard(text) {
+  if (!text) return false;
+  // OS clipboard via the app process — reliable on the desktop app.
+  try {
+    const r = await API.copyClipboard(text);
+    if (r && r.copied) return true;
+  } catch (_) { /* backend unreachable — try the browser API (dev in a tab) */ }
+  // navigator.clipboard is the only browser path we trust: if it resolves it
+  // genuinely wrote. (execCommand("copy") is deliberately NOT used — inside
+  // WebKit it returns true without writing, which is what made the button say
+  // "Copied" over an empty clipboard.)
   try {
     await navigator.clipboard.writeText(text);
     return true;
   } catch (_) {
-    try {
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      ta.style.position = "fixed";
-      ta.style.opacity = "0";
-      document.body.appendChild(ta);
-      ta.focus();
-      ta.select();
-      const ok = document.execCommand("copy");
-      document.body.removeChild(ta);
-      return ok;
-    } catch (_) {
-      return false;
-    }
+    return false;
   }
 }
 
@@ -51,7 +53,7 @@ const boxStyle = {
   boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)",
 };
 
-// Small button that flips to "Copied ✓" / "Copy failed" for a moment.
+// Small button that flips to "Copied" / "Copy failed" for a moment.
 function CopyBtn({ getText, label = "Copy", primary, icon = "copy", disabled, onBefore }) {
   const [state, setState] = React.useState(null); // null | "ok" | "fail"
   async function handle() {
@@ -67,7 +69,7 @@ function CopyBtn({ getText, label = "Copy", primary, icon = "copy", disabled, on
     setState(ok ? "ok" : "fail");
     setTimeout(() => setState(null), 1600);
   }
-  // Fixed width so the label swap (Copy prompt → Copied ✓) never reflows
+  // Fixed width so the label swap (Copy prompt / Copied) never reflows
   // the row around it.
   const anchored = { width: 118, justifyContent: "center", whiteSpace: "nowrap" };
   return (
@@ -76,7 +78,7 @@ function CopyBtn({ getText, label = "Copy", primary, icon = "copy", disabled, on
          style={state === "fail"
            ? { ...anchored, background: "rgba(216,80,74,0.12)", color: "#a4332e" }
            : anchored}>
-      {state === "ok" ? "Copied ✓" : state === "fail" ? "Copy failed" : label}
+      {state === "ok" ? "Copied" : state === "fail" ? "Copy failed" : label}
     </Btn>
   );
 }
@@ -313,94 +315,72 @@ function ComposerInner({ payload, exp, ctx }) {
             />
           </div>
         ) : (
-          <div style={{ display: "flex", gap: 10, alignItems: "stretch" }}>
-            {/* Left column — notes + one action button. The built prompt is
-                copied, not displayed: there is nothing to edit in it. */}
-            <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-              <FieldLabel>
-                {editExisting ? "Changes / instructions" :
-                 isFinal      ? "Themes to emphasize" : "Your notes"}
-              </FieldLabel>
-              <div className="mono-box" style={{ ...boxStyle, flex: 1 }}>
+          <React.Fragment>
+            {/* Two boxes, aligned side by side. Each box's placeholder is the
+                hint — no separate label above (that just repeated it). */}
+            <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+              <div className="mono-box" style={{ ...boxStyle, flex: 1, minWidth: 0 }}>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder={
-                    isSA         ? "Optional — what to emphasize in the answer" :
-                    editExisting ? "e.g. tighten the second paragraph, emphasize teamwork more" :
-                    isFinal      ? "e.g. focus on perseverance and LO5 (collaboration)" :
-                                   "e.g. practiced chord transitions, 45 min"
+                    isSA         ? "What to emphasize (optional)" :
+                    editExisting ? "What to change" :
+                    isFinal      ? "Themes to emphasize" : "Your notes"
                   }
                   style={taStyle(110)}
                 />
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                {isManual ? (
-                  <CopyBtn primary label="Copy prompt" icon="copy"
-                           disabled={!!loading || !canBuild}
-                           onBefore={buildPrompt} />
-                ) : (
-                  <Btn primary icon="sparkle" onClick={generateDirect}
-                       disabled={!!loading || !canBuild}>Generate</Btn>
-                )}
-              </div>
-            </div>
-
-            {/* Right column — AI response + live preview */}
-            <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-              <FieldLabel>
-                {isManual ? "Paste AI's response" : "Result"}
-              </FieldLabel>
-              <div className="mono-box" style={{ ...boxStyle, flex: 1 }}>
+              <div className="mono-box" style={{ ...boxStyle, flex: 1, minWidth: 0 }}>
                 <textarea
                   value={result}
                   onChange={(e) => setResult(e.target.value)}
                   placeholder={isManual
-                    ? "Paste the AI's response here…"
-                    : "Click Generate — the result lands here and can be edited"}
+                    ? "Paste the AI's response here"
+                    : "The result appears here after Generate"}
                   style={taStyle(110)}
                 />
               </div>
-              {previewHtml && (
-                <div style={{
-                  padding: "9px 12px",
-                  background: "#fff",
-                  borderRadius: 5,
-                  fontSize: 12, lineHeight: 1.6, color: N.ink,
-                  boxShadow: `inset 0 0 0 1px rgba(0,0,0,0.12), inset 3px 0 0 0 ${A.solid}`,
-                  maxHeight: 120, overflow: "auto",
-                }} dangerouslySetInnerHTML={{ __html: previewHtml }} />
-              )}
             </div>
-          </div>
-        )}
-
-        {/* Current text being revised (journal edit) or current SA answer */}
-        {mode === "ai" && (editExisting || (isSA && saQ && (saQ.answer || "").trim())) && (
-          <div style={{
-            padding: "6px 10px", borderRadius: 5,
-            background: "rgba(0,0,0,0.025)",
-            boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.08)",
-            fontSize: 11, lineHeight: 1.5, color: N.inkMid,
-            maxHeight: 60, overflow: "auto", whiteSpace: "pre-wrap",
-          }}>
-            <b style={{ color: N.ink }}>Current:</b> {editExisting || saQ.answer}
-          </div>
+            {previewHtml && (
+              <div style={{
+                padding: "9px 12px", background: "#fff", borderRadius: 5,
+                fontSize: 12, lineHeight: 1.6, color: N.ink,
+                boxShadow: `inset 0 0 0 1px rgba(0,0,0,0.12), inset 3px 0 0 0 ${A.solid}`,
+                maxHeight: 120, overflow: "auto",
+              }} dangerouslySetInnerHTML={{ __html: previewHtml }} />
+            )}
+          </React.Fragment>
         )}
       </div>
 
-      {/* Footer */}
+      {/* Footer — two columns mirror the notes/result boxes above: the AI
+          action sits under the notes box (right edge), Cancel + Send under the
+          result box. In Write mode there's no AI action, just Cancel + Send. */}
       <div style={{
-        display: "flex", alignItems: "center", gap: 8,
+        display: "flex", gap: 10, alignItems: "center",
         padding: "8px 14px 10px",
       }}>
-        <StatusLine loading={loading} error={error} />
-        <div style={{ flex: 1 }} />
-        <Btn onClick={ctx.closeComposer} disabled={!!loading}>Cancel</Btn>
-        <Btn primary onClick={() => send(sendBody)}
-             disabled={!!loading || !sendBody.trim() || (isSA && !saQ)}>
-          {isSA ? "Save answer" : rid && !payload.isPlaceholderFill ? "Save to ManageBac" : "Send to ManageBac"}
-        </Btn>
+        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 8 }}>
+          <StatusLine loading={loading} error={error} />
+          <div style={{ flex: 1 }} />
+          {mode === "ai" && (isManual ? (
+            <CopyBtn primary label="Copy prompt" icon="copy"
+                     disabled={!!loading || !canBuild}
+                     onBefore={buildPrompt} />
+          ) : (
+            <Btn primary icon="sparkle" onClick={generateDirect}
+                 disabled={!!loading || !canBuild}>Generate</Btn>
+          ))}
+        </div>
+        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center",
+                      justifyContent: "flex-end", gap: 8 }}>
+          <Btn onClick={ctx.closeComposer} disabled={!!loading}>Cancel</Btn>
+          <Btn primary onClick={() => send(sendBody)}
+               disabled={!!loading || !sendBody.trim() || (isSA && !saQ)}>
+            {isSA ? "Save answer" : rid && !payload.isPlaceholderFill ? "Save to ManageBac" : "Send to ManageBac"}
+          </Btn>
+        </div>
       </div>
       </React.Fragment>
       )}
