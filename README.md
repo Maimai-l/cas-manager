@@ -25,7 +25,7 @@ requests to ManageBac and, if you turn it on, your chosen AI provider.
 
 All user data lives in `~/Library/Application Support/CAS Manager/` on macOS:
 
-- `cas_data.db` — local cache of your experiences + reflections
+- `cas_data.db` — local cache of your experiences and reflections
 - `mb_state.json` — session cookies + ManageBac credentials, kept locally so the app can re-login when the session expires (treat like a password)
 - `cas_config.json` — your settings
 - `app.log` — runtime log
