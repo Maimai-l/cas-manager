@@ -22,6 +22,7 @@ cookie and credentials stay on your machine; nothing leaves it except the
 requests to ManageBac and, if you turn it on, your chosen AI provider.
 
 ## GUI preview
+<img width="2784" height="1864" alt="screenshot 2" src="https://github.com/user-attachments/assets/b31f5736-e78d-4d00-aaaa-456058fda003" />
 
 <img width="1392" height="932" alt="screenshot 1" src="https://github.com/user-attachments/assets/ba70b436-d773-4348-91ca-a720cb81a5f4" />
 
