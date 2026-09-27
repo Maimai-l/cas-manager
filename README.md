@@ -24,7 +24,7 @@ requests to ManageBac and, if you turn it on, your chosen AI provider.
 ## GUI preview
 
 <img width="1392" height="932" alt="screenshot 1" src="https://github.com/user-attachments/assets/ba70b436-d773-4348-91ca-a720cb81a5f4" />
-<img width="1392" height="932" alt="screenshot 2" src="https://github.com/user-attachments/assets/535d88c0-ee1a-43a1-a20c-a187d391367c" />
+
 
 ## Data location
 
